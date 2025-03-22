@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
 import { MapPinIcon, CreditCardIcon, BanknotesIcon, QrCodeIcon, ChevronRightIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { getCartTotal, clearCart } from '../store/cartSlice';
 
 const ADDRESSES = [
   {
@@ -40,15 +41,22 @@ const PAYMENT_METHODS = [
 ];
 
 const CheckoutScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
-  const total = useSelector((state) => state.cart.total);
+  const cartTotal = useSelector(getCartTotal);
 
   const [selectedAddress, setSelectedAddress] = useState(ADDRESSES[0]);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
-  const deliveryCharge = 40;
+  const formatPrice = (price) => {
+    return `₹${price.toLocaleString('en-IN')}`;
+  };
+
+  // Calculate totals
+  const itemTotal = cartTotal;
+  const deliveryFee = 40;
   const discount = 100;
-  const finalAmount = total + deliveryCharge - discount;
+  const finalTotal = itemTotal + deliveryFee - discount;
 
   const renderOrderSummary = () => (
     <View style={styles.section}>
@@ -63,7 +71,7 @@ const CheckoutScreen = ({ navigation }) => {
               </Text>
               <Text style={styles.summaryItemQuantity}>Qty: {item.quantity}</Text>
             </View>
-            <Text style={styles.summaryItemPrice}>{item.price}</Text>
+            <Text style={styles.summaryItemPrice}>{formatPrice(item.numericPrice * item.quantity)}</Text>
           </View>
         ))}
       </View>
@@ -71,19 +79,19 @@ const CheckoutScreen = ({ navigation }) => {
       <View style={styles.priceBreakdown}>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Item Total</Text>
-          <Text style={styles.priceValue}>₹{total}</Text>
+          <Text style={styles.priceValue}>{formatPrice(itemTotal)}</Text>
         </View>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Delivery</Text>
-          <Text style={styles.priceValue}>₹{deliveryCharge}</Text>
+          <Text style={styles.priceValue}>{formatPrice(deliveryFee)}</Text>
         </View>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Discount</Text>
-          <Text style={[styles.priceValue, styles.discountText]}>-₹{discount}</Text>
+          <Text style={[styles.priceValue, styles.discountText]}>-{formatPrice(discount)}</Text>
         </View>
         <View style={[styles.priceRow, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>₹{finalAmount}</Text>
+          <Text style={styles.totalValue}>{formatPrice(finalTotal)}</Text>
         </View>
       </View>
     </View>
@@ -140,6 +148,16 @@ const CheckoutScreen = ({ navigation }) => {
     </View>
   );
 
+  const handlePlaceOrder = () => {
+    // Add any order processing logic here
+    
+    // Clear the cart
+    dispatch(clearCart());
+    
+    // Navigate to success screen
+    navigation.navigate('OrderSuccess');
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView>
@@ -155,11 +173,9 @@ const CheckoutScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity
           style={styles.placeOrderButton}
-          onPress={() => {
-            /* Handle order placement */
-          }}
+          onPress={handlePlaceOrder}
         >
-          <Text style={styles.placeOrderText}>Place Order • ₹{finalAmount.toFixed(2)}</Text>
+          <Text style={styles.placeOrderText}>Place Order • {formatPrice(finalTotal)}</Text>
         </TouchableOpacity>
       </View>
     </View>

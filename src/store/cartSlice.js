@@ -1,56 +1,61 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const calculateTotal = (items) => {
-  return items.reduce((total, item) => {
-    const price = parseFloat(item.price.replace("₹", "").replace(",", "")) || 0;
-    return total + price * item.quantity;
-  }, 0);
-};
-
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
     items: [],
-    total: 0,
   },
   reducers: {
     addToCart: (state, action) => {
       const { product, quantity = 1 } = action.payload;
       const existingItem = state.items.find((item) => item.id === product.id);
 
+      // Convert price string to number
+      const numericPrice = Number(product.price.replace('₹', '').replace(/,/g, ''));
+
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
-        state.items.push({ ...product, quantity });
+        state.items.push({ 
+          ...product, 
+          quantity,
+          numericPrice // Store the numeric price
+        });
       }
-
-      state.total = calculateTotal(state.items);
     },
 
     removeFromCart: (state, action) => {
-      state.items = state.items.filter((item) => item.id !== action.payload);
-      state.total = calculateTotal(state.items);
+      const productId = action.payload;
+      state.items = state.items.filter((item) => item.id !== productId);
     },
 
     updateQuantity: (state, action) => {
-      const { id, qt } = action.payload;
-      const item = state.items.find((item) => item.id === id);
+      const { productId, quantity } = action.payload;
 
-      if (item) {
-        if (qt < 1) {
-          // If the new quantity is 0, remove the item from the cart
-          state.items = state.items.filter((item) => item.id !== id);
-        } else {
-          item.quantity = qt;
-        }
+      if (quantity < 1) {
+        state.items = state.items.filter((item) => item.id !== productId);
+        return;
       }
-      state.total = state.items.reduce((sum, item) => {
-        const cleanPrice = parseFloat(item.price.replace(/₹|,/g, ""));
-        return sum + cleanPrice * item.quantity;
-      }, 0);
+
+      const item = state.items.find(item => item.id === productId);
+      if (item) {
+        item.quantity = quantity;
+      }
+    },
+
+    clearCart: (state) => {
+      state.items = [];
     },
   },
 });
 
-export const { addToCart, removeFromCart, updateQuantity } = cartSlice.actions;
+export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions;
+
+// Updated getCartTotal selector
+export const getCartTotal = (state) => {
+  return state.cart.items.reduce((total, item) => {
+    return total + (item.numericPrice * item.quantity);
+  }, 0);
+};
+
 export default cartSlice.reducer;

@@ -1,13 +1,13 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from "react-native";
 import { TrashIcon } from "react-native-heroicons/outline";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
-import { removeFromCart, updateQuantity } from "../store/cartSlice";
+import { getCartTotal, removeFromCart, updateQuantity } from "../store/cartSlice";
 
 const CartScreen = () => {
   const cartItems = useSelector((state) => state.cart.items);
-  const total = useSelector((state) => state.cart.total);
+  const total = useSelector(getCartTotal);
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
@@ -18,16 +18,17 @@ const CartScreen = () => {
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemPrice}>{item.price}</Text>
         <View style={styles.quantityContainer}>
-          <TouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => {
-              dispatch(updateQuantity({ id: item.id, qt: item.quantity - 1 }));
-            }}
+          <TouchableOpacity 
+            style={styles.quantityButton} 
+            onPress={() => dispatch(updateQuantity({ productId: item.id, quantity: item.quantity - 1 }))}
           >
             <Text style={styles.quantityButtonText}>-</Text>
           </TouchableOpacity>
           <Text style={styles.quantity}>{item.quantity}</Text>
-          <TouchableOpacity style={styles.quantityButton} onPress={() => dispatch(updateQuantity({ id: item.id, qt: item.quantity + 1 }))}>
+          <TouchableOpacity 
+            style={styles.quantityButton} 
+            onPress={() => dispatch(updateQuantity({ productId: item.id, quantity: item.quantity + 1 }))}
+          >
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>
         </View>
@@ -37,6 +38,16 @@ const CartScreen = () => {
       </TouchableOpacity>
     </View>
   );
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price).replace('INR', '₹');
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -53,9 +64,12 @@ const CartScreen = () => {
         <View style={styles.footer}>
           <View style={styles.totalContainer}>
             <Text style={styles.totalText}>Total:</Text>
-            <Text style={styles.totalAmount}>₹{total}</Text>
+            <Text style={styles.totalAmount}>{formatPrice(total)}</Text>
           </View>
-          <TouchableOpacity style={styles.checkoutButton} onPress={() => navigation.navigate("Checkout")}>
+          <TouchableOpacity 
+            style={styles.checkoutButton} 
+            onPress={() => navigation.navigate("Checkout")}
+          >
             <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
           </TouchableOpacity>
         </View>

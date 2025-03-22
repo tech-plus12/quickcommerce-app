@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,10 @@ import {
   ShoppingCartIcon,
   BellIcon,
   ChevronRightIcon,
+  PlusIcon,
 } from 'react-native-heroicons/outline';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart } from '../store/cartSlice';
 
 const CATEGORIES = [
   { id: '1', name: 'Fashion', icon: '👕' },
@@ -91,6 +94,30 @@ const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(2);
   const [notificationCount, setNotificationCount] = useState(3);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const dispatch = useDispatch();
+  const cartItems = useSelector(state => state.cart.items);
+
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    setIsSearching(!!text);
+    
+    if (text.trim() === '') {
+      setSearchResults([]);
+      return;
+    }
+
+    const results = DUMMY_PRODUCTS.filter(product => 
+      product.name.toLowerCase().includes(text.toLowerCase())
+    );
+    setSearchResults(results);
+  };
+
+  const handleAddToCart = (product) => {
+    dispatch(addToCart({ product, quantity: 1 }));
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -100,7 +127,8 @@ const HomeScreen = ({ navigation }) => {
           style={styles.searchInput}
           placeholder="Search for products..."
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={handleSearch}
+          onFocus={() => navigation.navigate('Search')}
         />
       </View>
       <View style={styles.headerIcons}>
@@ -185,24 +213,65 @@ const HomeScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const renderSearchResults = () => (
+    <View style={styles.searchResultsContainer}>
+      {searchResults.map((item) => (
+        <View key={item.id} style={styles.searchResultItem}>
+          <TouchableOpacity
+            style={styles.searchResultContent}
+            onPress={() => navigation.navigate('ProductDetails', { product: item })}
+          >
+            <Image source={{ uri: item.image }} style={styles.searchResultImage} />
+            <View style={styles.searchResultInfo}>
+              <Text style={styles.searchResultName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={styles.searchResultPrice}>{item.price}</Text>
+              {item.originalPrice && (
+                <Text style={styles.searchResultOriginalPrice}>{item.originalPrice}</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.addToCartButton}
+            onPress={() => handleAddToCart(item)}
+          >
+            <PlusIcon size={16} color="#fff" />
+            <Text style={styles.addToCartText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {renderHeader()}
       <ScrollView showsVerticalScrollIndicator={false}>
-        {renderCategories()}
-        {renderDeals()}
-        <View style={styles.productsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Products</Text>
-            <TouchableOpacity style={styles.viewAllButton}>
-              <Text style={styles.viewAllText}>View All</Text>
-              <ChevronRightIcon size={20} color="#2874f0" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.productsGrid}>
-            {DUMMY_PRODUCTS.map(renderProductCard)}
-          </View>
-        </View>
+        {isSearching ? (
+          searchResults.length > 0 ? (
+            renderSearchResults()
+          ) : (
+            <Text style={styles.noResultsText}>No products found</Text>
+          )
+        ) : (
+          <>
+            {renderCategories()}
+            {renderDeals()}
+            <View style={styles.productsSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Trending Products</Text>
+                <TouchableOpacity style={styles.viewAllButton}>
+                  <Text style={styles.viewAllText}>View All</Text>
+                  <ChevronRightIcon size={20} color="#2874f0" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.productsGrid}>
+                {DUMMY_PRODUCTS.map(renderProductCard)}
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -410,6 +479,74 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 4,
   },
+  searchResultsContainer: {
+    backgroundColor: '#fff',
+    padding: 12,
+  },
+  searchResultContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    padding: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchResultImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+  },
+  searchResultInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 14,
+    color: '#212121',
+  },
+  searchResultPrice: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2874f0',
+    marginTop: 4,
+  },
+  searchResultOriginalPrice: {
+    fontSize: 12,
+    color: '#666',
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+  },
+  addToCartButton: {
+    backgroundColor: '#2874f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  addToCartText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  noResultsText: {
+    textAlign: 'center',
+    padding: 20,
+    color: '#666',
+    fontSize: 16,
+  }
 });
 
 export default HomeScreen;

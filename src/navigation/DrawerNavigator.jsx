@@ -12,7 +12,7 @@ import { logout } from "../store/authSlice";
 const Drawer = createDrawerNavigator();
 
 const CustomDrawerContent = ({ navigation }) => {
-  const dispatch = useDispatch(); 
+  const dispatch = useDispatch();
   const menuItems = [
     {
       name: "MainTabs",
@@ -147,7 +147,7 @@ const DrawerNavigator = () => {
           component={item.component}
           options={{
             title: item.label,
-            headerTitle: item.label === "Home" ? "Flipkart" : item.label,
+            headerTitle: item.label === "Home" ? "PlusCart" : item.label,
           }}
         />
       ))}

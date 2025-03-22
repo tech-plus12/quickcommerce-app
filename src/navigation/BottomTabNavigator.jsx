@@ -6,6 +6,8 @@ import CartScreen from '../screens/CartScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import ProductDetailsScreen from '../screens/ProductDetailsScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import SearchScreen from '../screens/SearchScreen';
+import OrderSuccessScreen from '../screens/OrderSuccessScreen';
 import { 
   HomeIcon, 
   ShoppingCartIcon, 
@@ -28,6 +30,18 @@ const HomeStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+      <Stack.Screen 
+        name="Search" 
+        component={SearchScreen}
+        options={{
+          headerShown: true,
+          title: 'Search Products',
+          headerStyle: {
+            backgroundColor: '#2874f0',
+          },
+          headerTintColor: '#fff',
+        }}
+      />
     </Stack.Navigator>
   );
 };
@@ -37,6 +51,7 @@ const CartStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CartScreen" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen} />
     </Stack.Navigator>
   );
 };

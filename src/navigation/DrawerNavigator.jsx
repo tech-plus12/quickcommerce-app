@@ -74,18 +74,12 @@ const CustomDrawerContent = ({ navigation }) => {
         style={styles.logoutButton}
         onPress={() => {
           // Handle logout
+          dispatch(logout());
           navigation.closeDrawer();
         }}
       >
         <ArrowRightOnRectangleIcon size={24} color="#FF4444" />
-        <Text
-          style={styles.logoutText}
-          onPress={() => {
-            dispatch(logout());
-          }}
-        >
-          Logout
-        </Text>
+        <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </View>
   );

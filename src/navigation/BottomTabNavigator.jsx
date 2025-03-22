@@ -109,13 +109,13 @@ const BottomTabNavigator = () => {
           title: 'Notifications',
         }}
       />
-      <Tab.Screen 
+      {/* <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
         options={{
           title: 'Profile',
         }}
-      />
+      /> */}
     </Tab.Navigator>
   );
 };

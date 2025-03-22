@@ -15,10 +15,10 @@ import {
   Alert,
   Modal,
 } from "react-native";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Formik } from "formik";
 import * as Yup from "yup";
-import { login, signup, resetPassword, updatePassword } from "../store/authSlice";
+import { login, signup, resetPassword,  updatePassword, initiateSignup, verifySignupOTP, completeSignup } from "../store/authSlice";
 import Icon from "react-native-vector-icons/Feather";
 import LinearGradient from "react-native-linear-gradient";
 
@@ -47,21 +47,24 @@ const OTPSchema = Yup.object().shape({
 });
 
 const NewPasswordSchema = Yup.object().shape({
-  newPassword: Yup.string().min(6, "Password must be at least 6 characters").required("New password is required"),
+  newPassword: Yup.string()
+    .min(6, "Password must be at least 6 characters")
+    .required("New password is required"),
   confirmPassword: Yup.string()
-    .oneOf([Yup.ref("newPassword")], "Passwords must match")
+    .oneOf([Yup.ref('newPassword')], "Passwords must match")
     .required("Confirm password is required"),
 });
 
 const ForgotPasswordSchema = Yup.object().shape({
-  contactType: Yup.string().oneOf(["email", "phone"]).required(),
-  contact: Yup.string().when("contactType", {
-    is: "email",
-    then: () => Yup.string().email("Invalid email format").required("Email is required"),
-    otherwise: () =>
-      Yup.string()
-        .matches(/^\d{10}$/, "Phone number must be exactly 10 digits")
-        .required("Phone number is required"),
+  contactType: Yup.string().oneOf(['email', 'phone']).required(),
+  contact: Yup.string().when('contactType', {
+    is: 'email',
+    then: () => Yup.string()
+      .email("Invalid email format")
+      .required("Email is required"),
+    otherwise: () => Yup.string()
+      .matches(/^\d{10}$/, "Phone number must be exactly 10 digits")
+      .required("Phone number is required"),
   }),
 });
 
@@ -77,15 +80,25 @@ const AuthScreen = ({ navigation }) => {
   const [animation] = useState(new Animated.Value(0));
   const scrollViewRef = useRef(null);
   const [focusedInput, setFocusedInput] = useState(null);
-  const [resetStep, setResetStep] = useState("contact"); // 'contact', 'otp', 'password'
-  const [contactInfo, setContactInfo] = useState({ type: "email", value: "" });
-  const [emailValue, setEmailValue] = useState("");
-  const [phoneValue, setPhoneValue] = useState("");
+  const [resetStep, setResetStep] = useState('contact'); // 'contact', 'otp', 'password'
+  const [contactInfo, setContactInfo] = useState({ type: 'email', value: '' });
+  const [emailValue, setEmailValue] = useState('');
+  const [phoneValue, setPhoneValue] = useState('');
+  const [showSignupOTP, setShowSignupOTP] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [pendingLoginData, setPendingLoginData] = useState(null);
+
+  const verifiedAccounts = useSelector(state => state.auth.verifiedAccounts);
+
+  useEffect(() => {
+    console.log('Current resetStep:', resetStep);
+    console.log('Current contactInfo:', contactInfo);
+  }, [resetStep, contactInfo]);
 
   const handleCloseModal = () => {
     setForgotPasswordVisible(false);
-    setResetStep("contact");
-    setContactInfo({ type: "email", value: "" });
+    setResetStep('contact');
+    setContactInfo({ type: 'email', value: '' });
     // Reset password visibility states
     setShowNewPassword(false);
     setShowConfirmPassword(false);
@@ -112,55 +125,39 @@ const AuthScreen = ({ navigation }) => {
   };
 
   const handleLogin = (values, { setSubmitting, setFieldError }) => {
-    dispatch(login(values))
-      .unwrap()
-      .then(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Home" }],
-        });
-      })
-      .catch((error) => {
-        if (error.message) {
-        } else {
-          // For specific field errors
-          if (error.phoneNumber) {
-            setFieldError("phoneNumber", error.phoneNumber);
-          }
-          if (error.password) {
-            setFieldError("password", error.password);
-          }
-          if (!error.phoneNumber && !error.password) {
-          }
-        }
-      })
-      .finally(() => {
-        setSubmitting(false);
-      });
+    // Check if account is verified using verifiedAccounts from state
+    const isVerified = verifiedAccounts[values.phoneNumber];
+
+    if (!isVerified) {
+      // Store login data and show verification modal
+      setPendingLoginData(values);
+      setShowVerificationModal(true);
+      setSubmitting(false);
+      return;
+    }
+
+    // Account is verified, proceed with login
+    dispatch(login(values));
+    setSubmitting(false);
   };
 
-  const handleSignup = (values, { setSubmitting, setFieldError }) => {
-    dispatch(signup(values))
-      .unwrap()
-      .then(() => {
-        toggleAuthMode();
-      })
-      .catch((error) => {
-        if (error.message) {
-        } else {
-          Object.keys(error).forEach((field) => {
-            if (field in values) {
-              setFieldError(field, error[field]);
-            }
-          });
+  const handleSignup = (values, { setSubmitting }) => {
+    dispatch(initiateSignup(values));
+    setShowSignupOTP(true);
+    setSubmitting(false);
+  };
 
-          if (Object.keys(error).length === 0) {
-          }
-        }
-      })
-      .finally(() => {
-        setSubmitting(false);
-      });
+  const handleSignupOTPVerification = (values, { setSubmitting }) => {
+    dispatch(verifySignupOTP(values.otp));
+    dispatch(completeSignup());
+    setShowSignupOTP(false);
+    toggleAuthMode(); // Switch back to login screen
+    Alert.alert(
+      "Success",
+      "Account created successfully! Please login with your credentials.",
+      [{ text: "OK" }]
+    );
+    setSubmitting(false);
   };
 
   const handleForgotPassword = (values, { setSubmitting, resetForm }) => {
@@ -174,7 +171,7 @@ const AuthScreen = ({ navigation }) => {
           setResetSuccess(false);
         }, 3000);
       })
-      .catch((error) => {})
+      .catch((error) => { })
       .finally(() => {
         setSubmitting(false);
       });
@@ -196,32 +193,38 @@ const AuthScreen = ({ navigation }) => {
 
   const renderForgotPasswordContent = () => {
     switch (resetStep) {
-      case "contact":
+      case 'contact':
         return (
           <Formik
-            initialValues={{ contactType: "email", contact: "" }}
+            initialValues={{ contactType: 'email', contact: '' }}
             validationSchema={ForgotPasswordSchema}
             onSubmit={(values, { setSubmitting }) => {
+              console.log("Send OTP clicked with values:", values);
               try {
                 setContactInfo({
                   type: values.contactType,
-                  value: values.contact,
+                  value: values.contact
                 });
 
                 setTimeout(() => {
-                  Alert.alert("Success", `OTP sent to your ${values.contactType}. Use 123456 as OTP.`, [
-                    {
-                      text: "OK",
+                  console.log("OTP sent successfully");
+
+                  Alert.alert(
+                    'Success',
+                    `OTP sent to your ${values.contactType}. Use 123456 as OTP.`,
+                    [{
+                      text: 'OK',
                       onPress: () => {
-                        setResetStep("otp");
-                      },
-                    },
-                  ]);
+                        setResetStep('otp');
+                      }
+                    }]
+                  );
 
                   setSubmitting(false);
                 }, 1500);
               } catch (error) {
-                Alert.alert("Error", "Failed to send OTP. Please try again.");
+                console.log("Error sending OTP:", error); // Debug log
+                Alert.alert('Error', 'Failed to send OTP. Please try again.');
                 setSubmitting(false);
               }
             }}
@@ -230,38 +233,50 @@ const AuthScreen = ({ navigation }) => {
               <>
                 <View style={styles.segmentedControl}>
                   <TouchableOpacity
-                    style={[styles.segmentButton, values.contactType === "email" && styles.segmentButtonActive]}
+                    style={[
+                      styles.segmentButton,
+                      values.contactType === 'email' && styles.segmentButtonActive,
+                    ]}
                     onPress={() => {
-                      setFieldValue("contactType", "email");
-                      setFieldValue("contact", emailValue);
+                      setFieldValue('contactType', 'email');
+                      setFieldValue('contact', emailValue);
                     }}
                   >
-                    <Text style={[styles.segmentText, values.contactType === "email" && styles.segmentTextActive]}>Email</Text>
+                    <Text style={[
+                      styles.segmentText,
+                      values.contactType === 'email' && styles.segmentTextActive,
+                    ]}>Email</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.segmentButton, values.contactType === "phone" && styles.segmentButtonActive]}
+                    style={[
+                      styles.segmentButton,
+                      values.contactType === 'phone' && styles.segmentButtonActive,
+                    ]}
                     onPress={() => {
-                      setFieldValue("contactType", "phone");
-                      setFieldValue("contact", phoneValue);
+                      setFieldValue('contactType', 'phone');
+                      setFieldValue('contact', phoneValue);
                     }}
                   >
-                    <Text style={[styles.segmentText, values.contactType === "phone" && styles.segmentTextActive]}>Phone</Text>
+                    <Text style={[
+                      styles.segmentText,
+                      values.contactType === 'phone' && styles.segmentTextActive,
+                    ]}>Phone</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>{values.contactType === "email" ? "Email Address" : "Phone Number"}</Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedInput === "resetContact" && styles.inputFocused,
-                      touched.contact && errors.contact && styles.inputError,
-                    ]}
-                  >
+                  <Text style={styles.inputLabel}>
+                    {values.contactType === 'email' ? 'Email Address' : 'Phone Number'}
+                  </Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedInput === 'resetContact' && styles.inputFocused,
+                    touched.contact && errors.contact && styles.inputError,
+                  ]}>
                     <Icon
-                      name={values.contactType === "email" ? "mail" : "smartphone"}
+                      name={values.contactType === 'email' ? 'mail' : 'smartphone'}
                       size={20}
-                      color={focusedInput === "resetContact" ? "#5B37B7" : "#666666"}
+                      color={focusedInput === 'resetContact' ? '#5B37B7' : '#666666'}
                       style={styles.inputIcon}
                     />
                     <TextInput
@@ -269,23 +284,25 @@ const AuthScreen = ({ navigation }) => {
                       value={values.contact}
                       onChangeText={(text) => {
                         // Only allow numbers for phone
-                        if (values.contactType === "phone") {
-                          const cleaned = text.replace(/[^0-9]/g, "");
-                          setFieldValue("contact", cleaned);
+                        if (values.contactType === 'phone') {
+                          const cleaned = text.replace(/[^0-9]/g, '');
+                          setFieldValue('contact', cleaned);
                           setPhoneValue(cleaned);
                         } else {
-                          setFieldValue("contact", text);
+                          setFieldValue('contact', text);
                           setEmailValue(text);
                         }
                       }}
-                      onFocus={() => handleInputFocus("resetContact")}
+                      onFocus={() => handleInputFocus('resetContact')}
                       onBlur={() => {
                         handleInputBlur();
-                        handleBlur("contact");
+                        handleBlur('contact');
                       }}
-                      placeholder={values.contactType === "email" ? "Enter your email" : "Enter your phone number"}
-                      keyboardType={values.contactType === "email" ? "email-address" : "numeric"}
-                      maxLength={values.contactType === "phone" ? 10 : undefined}
+                      placeholder={values.contactType === 'email' ?
+                        "Enter your email" : "Enter your phone number"}
+                      keyboardType={values.contactType === 'email' ?
+                        "email-address" : "numeric"}
+                      maxLength={values.contactType === 'phone' ? 10 : undefined}
                     />
                   </View>
                   {touched.contact && errors.contact && (
@@ -296,41 +313,50 @@ const AuthScreen = ({ navigation }) => {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.resetButton, (!values.contact || isSubmitting) && styles.authButtonDisabled]}
+                  style={[
+                    styles.resetButton,
+                    (!values.contact || isSubmitting) && styles.authButtonDisabled
+                  ]}
                   onPress={() => {
                     console.log("Send OTP button pressed", values); // Debug log
                     handleSubmit();
                   }}
                   disabled={!values.contact || isSubmitting}
                 >
-                  {isSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.resetButtonText}>Send OTP</Text>}
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Send OTP</Text>
+                  )}
                 </TouchableOpacity>
               </>
             )}
           </Formik>
         );
 
-      case "otp":
+      case 'otp':
         return (
           <Formik
-            initialValues={{ otp: "" }}
+            initialValues={{ otp: '' }}
             validationSchema={OTPSchema}
             onSubmit={(values, { setSubmitting }) => {
               try {
                 setSubmitting(true);
                 // For testing purposes, using hardcoded OTP
-                if (values.otp === "123456") {
-                  Alert.alert("Success", "OTP verified successfully", [
-                    {
-                      text: "OK",
-                      onPress: () => setResetStep("password"),
-                    },
-                  ]);
+                if (values.otp === '123456') {
+                  Alert.alert(
+                    'Success',
+                    'OTP verified successfully',
+                    [{
+                      text: 'OK',
+                      onPress: () => setResetStep('password')
+                    }]
+                  );
                 } else {
-                  Alert.alert("Error", "Invalid OTP. Please try again.");
+                  Alert.alert('Error', 'Invalid OTP. Please try again.');
                 }
               } catch (error) {
-                Alert.alert("Error", "Failed to verify OTP");
+                Alert.alert('Error', 'Failed to verify OTP');
               } finally {
                 setSubmitting(false);
               }
@@ -339,24 +365,34 @@ const AuthScreen = ({ navigation }) => {
             {({ handleSubmit, values, setFieldValue, errors, touched, handleBlur, isSubmitting }) => (
               <>
                 <Text style={styles.modalSubtitle}>
-                  Enter the 6-digit code sent to your {contactInfo.type}:<Text style={{ fontWeight: "bold" }}> {contactInfo.value}</Text>
+                  Enter the 6-digit code sent to your {contactInfo.type}:
+                  <Text style={{ fontWeight: 'bold' }}> {contactInfo.value}</Text>
                 </Text>
 
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>OTP Code</Text>
-                  <View style={[styles.inputWrapper, focusedInput === "otp" && styles.inputFocused, Boolean(touched.otp && errors.otp) && styles.inputError]}>
-                    <Icon name="key" size={20} color={focusedInput === "otp" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedInput === 'otp' && styles.inputFocused,
+                    Boolean(touched.otp && errors.otp) && styles.inputError
+                  ]}>
+                    <Icon
+                      name="key"
+                      size={20}
+                      color={focusedInput === 'otp' ? '#5B37B7' : '#666666'}
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={[styles.input, styles.otpInput]}
                       value={values.otp}
                       onChangeText={(text) => {
-                        const cleaned = text.replace(/[^0-9]/g, "");
-                        setFieldValue("otp", cleaned);
+                        const cleaned = text.replace(/[^0-9]/g, '');
+                        setFieldValue('otp', cleaned);
                       }}
-                      onFocus={() => handleInputFocus("otp")}
+                      onFocus={() => handleInputFocus('otp')}
                       onBlur={() => {
                         handleInputBlur();
-                        handleBlur("otp");
+                        handleBlur('otp');
                       }}
                       placeholder="Enter 6-digit OTP"
                       keyboardType="numeric"
@@ -372,39 +408,52 @@ const AuthScreen = ({ navigation }) => {
                 </View>
 
                 <View style={styles.resendContainer}>
-                  <TouchableOpacity onPress={() => setResetStep("contact")} style={styles.resendButton}>
+                  <TouchableOpacity
+                    onPress={() => setResetStep('contact')}
+                    style={styles.resendButton}
+                  >
                     <Text style={styles.resendText}>Didn't receive code? Send again</Text>
                   </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.resetButton, (Boolean(!values.otp || values.otp.length < 6) || isSubmitting) && styles.authButtonDisabled]}
+                  style={[
+                    styles.resetButton,
+                    (Boolean(!values.otp || values.otp.length < 6) || isSubmitting) &&
+                    styles.authButtonDisabled
+                  ]}
                   onPress={handleSubmit}
                   disabled={!values.otp || values.otp.length < 6 || isSubmitting}
                 >
-                  {isSubmitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.resetButtonText}>Verify OTP</Text>}
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Verify OTP</Text>
+                  )}
                 </TouchableOpacity>
               </>
             )}
           </Formik>
         );
 
-      case "password":
+      case 'password':
         return (
           <Formik
-            initialValues={{ newPassword: "", confirmPassword: "" }}
+            initialValues={{ newPassword: '', confirmPassword: '' }}
             validationSchema={NewPasswordSchema}
             onSubmit={(values) => {
               dispatch(updatePassword());
-              Alert.alert("Success", "Password updated successfully", [
-                {
-                  text: "OK",
+              Alert.alert(
+                'Success',
+                'Password updated successfully',
+                [{
+                  text: 'OK',
                   onPress: () => {
                     setForgotPasswordVisible(false);
-                    setResetStep("contact");
-                  },
-                },
-              ]);
+                    setResetStep('contact');
+                  }
+                }]
+              );
             }}
           >
             {({ handleSubmit, values, handleChange, errors, touched, handleBlur }) => (
@@ -413,31 +462,42 @@ const AuthScreen = ({ navigation }) => {
 
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>New Password</Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedInput === "newPassword" && styles.inputFocused,
-                      touched.newPassword && errors.newPassword && styles.inputError,
-                    ]}
-                  >
-                    <Icon name="lock" size={20} color={focusedInput === "newPassword" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedInput === 'newPassword' && styles.inputFocused,
+                    touched.newPassword && errors.newPassword && styles.inputError,
+                  ]}>
+                    <Icon
+                      name="lock"
+                      size={20}
+                      color={focusedInput === 'newPassword' ? '#5B37B7' : '#666666'}
+                      style={styles.inputIcon}
+                    />
 
                     <TextInput
                       style={styles.input}
-                      key={showNewPassword ? "shown" : "hidden"}
+                      key={showNewPassword ? 'shown' : 'hidden'} 
                       value={values.newPassword}
-                      onChangeText={handleChange("newPassword")}
-                      onFocus={() => handleInputFocus("newPassword")}
+                      onChangeText={handleChange('newPassword')}
+                      onFocus={() => handleInputFocus('newPassword')}
                       onBlur={() => {
                         handleInputBlur();
-                        handleBlur("newPassword");
+                        handleBlur('newPassword');
                       }}
                       placeholder="Enter new password"
                       secureTextEntry={!showNewPassword}
                       placeholderTextColor="#999999"
                     />
-                    <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowNewPassword((prev) => !prev)} activeOpacity={0.7}>
-                      <Icon name={showNewPassword ? "eye" : "eye-off"} size={20} color={focusedInput === "newPassword" ? "#5B37B7" : "#666666"} />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => setShowNewPassword(prev => !prev)}
+                      activeOpacity={0.7}
+                    >
+                      <Icon
+                        name={showNewPassword ? "eye" : "eye-off"}
+                        size={20}
+                        color={focusedInput === 'newPassword' ? '#5B37B7' : '#666666'}
+                      />
                     </TouchableOpacity>
                   </View>
                   {touched.newPassword && errors.newPassword && (
@@ -447,31 +507,43 @@ const AuthScreen = ({ navigation }) => {
                   )}
                 </View>
 
+
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Confirm Password</Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedInput === "confirmPassword" && styles.inputFocused,
-                      touched.confirmPassword && errors.confirmPassword && styles.inputError,
-                    ]}
-                  >
-                    <Icon name="lock" size={20} color={focusedInput === "confirmPassword" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedInput === 'confirmPassword' && styles.inputFocused,
+                    touched.confirmPassword && errors.confirmPassword && styles.inputError,
+                  ]}>
+                    <Icon
+                      name="lock"
+                      size={20}
+                      color={focusedInput === 'confirmPassword' ? '#5B37B7' : '#666666'}
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
                       value={values.confirmPassword}
-                      onChangeText={handleChange("confirmPassword")}
-                      onFocus={() => handleInputFocus("confirmPassword")}
+                      onChangeText={handleChange('confirmPassword')}
+                      onFocus={() => handleInputFocus('confirmPassword')}
                       onBlur={() => {
                         handleInputBlur();
-                        handleBlur("confirmPassword");
+                        handleBlur('confirmPassword');
                       }}
                       placeholder="Confirm new password"
                       secureTextEntry={!showConfirmPassword}
                       placeholderTextColor="#999999"
                     />
-                    <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)} activeOpacity={0.7}>
-                      <Icon name={showConfirmPassword ? "eye" : "eye-off"} size={20} color={focusedInput === "confirmPassword" ? "#5B37B7" : "#666666"} />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      activeOpacity={0.7}
+                    >
+                      <Icon
+                        name={showConfirmPassword ? "eye" : "eye-off"}
+                        size={20}
+                        color={focusedInput === 'confirmPassword' ? '#5B37B7' : '#666666'}
+                      />
                     </TouchableOpacity>
                   </View>
                   {touched.confirmPassword && errors.confirmPassword && (
@@ -482,7 +554,10 @@ const AuthScreen = ({ navigation }) => {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.resetButton, (errors.newPassword || errors.confirmPassword) && styles.authButtonDisabled]}
+                  style={[
+                    styles.resetButton,
+                    (errors.newPassword || errors.confirmPassword) && styles.authButtonDisabled
+                  ]}
                   onPress={handleSubmit}
                 >
                   <Text style={styles.resetButtonText}>Reset Password</Text>
@@ -493,6 +568,214 @@ const AuthScreen = ({ navigation }) => {
         );
     }
   };
+
+  const renderSignupOTPModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showSignupOTP}
+      onRequestClose={() => setShowSignupOTP(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Verify Phone Number</Text>
+            <TouchableOpacity onPress={() => setShowSignupOTP(false)}>
+              <Icon name="x" size={24} color="#333333" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>
+            Enter the 6-digit code sent to your phone number
+          </Text>
+
+          <Formik
+            initialValues={{ otp: '' }}
+            validationSchema={OTPSchema}
+            onSubmit={handleSignupOTPVerification}
+          >
+            {({ handleSubmit, values, setFieldValue, errors, touched, handleBlur, isSubmitting }) => (
+              <>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>OTP Code</Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedInput === 'signupOtp' && styles.inputFocused,
+                    touched.otp && errors.otp && styles.inputError
+                  ]}>
+                    <Icon
+                      name="key"
+                      size={20}
+                      color={focusedInput === 'signupOtp' ? '#5B37B7' : '#666666'}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={[styles.input, styles.otpInput]}
+                      value={values.otp}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9]/g, '');
+                        setFieldValue('otp', cleaned);
+                      }}
+                      onFocus={() => handleInputFocus('signupOtp')}
+                      onBlur={() => {
+                        handleInputBlur();
+                        handleBlur('otp');
+                      }}
+                      placeholder="Enter 6-digit OTP"
+                      keyboardType="numeric"
+                      maxLength={6}
+                      placeholderTextColor="#999999"
+                    />
+                  </View>
+                  {touched.otp && errors.otp && (
+                    <Text style={styles.errorText}>
+                      <Icon name="alert-circle" size={14} color="#FF3B30" /> {errors.otp}
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.resetButton,
+                    (!values.otp || values.otp.length < 6 || isSubmitting) && styles.authButtonDisabled
+                  ]}
+                  onPress={handleSubmit}
+                  disabled={!values.otp || values.otp.length < 6 || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Verify OTP</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </Formik>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const handleVerificationComplete = (values, { setSubmitting }) => {
+    try {
+      if (values.otp && values.otp.length === 6) {
+        // First verify the OTP
+        dispatch(verifySignupOTP(values.otp));
+        
+        // Add the account to verified accounts
+        dispatch(completeSignup());
+        
+        // Now proceed with login
+        dispatch(login(pendingLoginData));
+        
+        // Close the modal and reset state
+        setShowVerificationModal(false);
+        setPendingLoginData(null);
+      } else {
+        Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Verification failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderVerificationModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showVerificationModal}
+      onRequestClose={() => {
+        setShowVerificationModal(false);
+        setPendingLoginData(null);
+      }}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Verify Account</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setShowVerificationModal(false);
+                setPendingLoginData(null);
+              }}
+            >
+              <Icon name="x" size={24} color="#333333" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>
+            Your account needs verification. Please enter the OTP sent to your phone number:
+            <Text style={{ fontWeight: 'bold' }}> {pendingLoginData?.phoneNumber}</Text>
+          </Text>
+
+          <Formik
+            initialValues={{ otp: '' }}
+            validationSchema={OTPSchema}
+            onSubmit={handleVerificationComplete}
+          >
+            {({ handleSubmit, values, setFieldValue, errors, touched, handleBlur, isSubmitting }) => (
+              <>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>OTP Code</Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedInput === 'loginOtp' && styles.inputFocused,
+                    touched.otp && errors.otp && styles.inputError
+                  ]}>
+                    <Icon
+                      name="key"
+                      size={20}
+                      color={focusedInput === 'loginOtp' ? '#5B37B7' : '#666666'}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={[styles.input, styles.otpInput]}
+                      value={values.otp}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9]/g, '');
+                        setFieldValue('otp', cleaned);
+                      }}
+                      onFocus={() => handleInputFocus('loginOtp')}
+                      onBlur={() => {
+                        handleInputBlur();
+                        handleBlur('otp');
+                      }}
+                      placeholder="Enter 6-digit OTP"
+                      keyboardType="numeric"
+                      maxLength={6}
+                      placeholderTextColor="#999999"
+                    />
+                  </View>
+                  {touched.otp && errors.otp && (
+                    <Text style={styles.errorText}>
+                      <Icon name="alert-circle" size={14} color="#FF3B30" /> {errors.otp}
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.resetButton,
+                    (!values.otp || values.otp.length < 6 || isSubmitting) && styles.authButtonDisabled
+                  ]}
+                  onPress={handleSubmit}
+                  disabled={!values.otp || values.otp.length < 6 || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Verify & Login</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </Formik>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -532,27 +815,34 @@ const AuthScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.inputWrapper,
-                          focusedInput === "loginPhone" && styles.inputFocused,
+                          focusedInput === 'loginPhone' && styles.inputFocused,
                           touched.phoneNumber && errors.phoneNumber && styles.inputError,
                           values.phoneNumber && !errors.phoneNumber && styles.inputSuccess,
                         ]}
                       >
-                        <Icon name="smartphone" size={20} color={focusedInput === "loginPhone" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                        <Icon
+                          name="smartphone"
+                          size={20}
+                          color={focusedInput === 'loginPhone' ? '#5B37B7' : '#666666'}
+                          style={styles.inputIcon}
+                        />
                         <TextInput
                           style={styles.input}
                           value={values.phoneNumber}
                           onChangeText={(text) => formatPhoneNumber(text, setFieldValue)}
-                          onFocus={() => handleInputFocus("loginPhone")}
+                          onFocus={() => handleInputFocus('loginPhone')}
                           onBlur={() => {
                             handleInputBlur();
-                            handleBlur("phoneNumber");
+                            handleBlur('phoneNumber');
                           }}
                           placeholder="Enter your phone number"
                           keyboardType="phone-pad"
                           maxLength={10}
                           placeholderTextColor="#999999"
                         />
-                        {values.phoneNumber && !errors.phoneNumber && <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />}
+                        {values.phoneNumber && !errors.phoneNumber &&
+                          <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />
+                        }
                       </View>
                       {touched.phoneNumber && errors.phoneNumber && (
                         <Text style={styles.errorText}>
@@ -566,27 +856,39 @@ const AuthScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.inputWrapper,
-                          focusedInput === "loginPassword" && styles.inputFocused,
+                          focusedInput === 'loginPassword' && styles.inputFocused,
                           touched.password && errors.password && styles.inputError,
                           values.password && !errors.password && styles.inputSuccess,
                         ]}
                       >
-                        <Icon name="lock" size={20} color={focusedInput === "loginPassword" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                        <Icon
+                          name="lock"
+                          size={20}
+                          color={focusedInput === 'loginPassword' ? '#5B37B7' : '#666666'}
+                          style={styles.inputIcon}
+                        />
                         <TextInput
                           style={styles.input}
                           value={values.password}
                           onChangeText={handleChange("password")}
-                          onFocus={() => handleInputFocus("loginPassword")}
+                          onFocus={() => handleInputFocus('loginPassword')}
                           onBlur={() => {
                             handleInputBlur();
-                            handleBlur("password");
+                            handleBlur('password');
                           }}
                           placeholder="Enter your password"
                           secureTextEntry={secureLoginPassword}
                           placeholderTextColor="#999999"
                         />
-                        <TouchableOpacity style={styles.eyeIcon} onPress={() => setSecureLoginPassword(!secureLoginPassword)}>
-                          <Icon name={secureLoginPassword ? "eye-off" : "eye"} size={20} color={focusedInput === "loginPassword" ? "#5B37B7" : "#666666"} />
+                        <TouchableOpacity
+                          style={styles.eyeIcon}
+                          onPress={() => setSecureLoginPassword(!secureLoginPassword)}
+                        >
+                          <Icon
+                            name={secureLoginPassword ? "eye-off" : "eye"}
+                            size={20}
+                            color={focusedInput === 'loginPassword' ? '#5B37B7' : '#666666'}
+                          />
                         </TouchableOpacity>
                       </View>
                       {touched.password && errors.password && (
@@ -634,25 +936,32 @@ const AuthScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.inputWrapper,
-                          focusedInput === "signupName" && styles.inputFocused,
+                          focusedInput === 'signupName' && styles.inputFocused,
                           touched.name && errors.name && styles.inputError,
                           values.name && !errors.name && styles.inputSuccess,
                         ]}
                       >
-                        <Icon name="user" size={20} color={focusedInput === "signupName" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                        <Icon
+                          name="user"
+                          size={20}
+                          color={focusedInput === 'signupName' ? '#5B37B7' : '#666666'}
+                          style={styles.inputIcon}
+                        />
                         <TextInput
                           style={styles.input}
                           value={values.name}
                           onChangeText={handleChange("name")}
-                          onFocus={() => handleInputFocus("signupName")}
+                          onFocus={() => handleInputFocus('signupName')}
                           onBlur={() => {
                             handleInputBlur();
-                            handleBlur("name");
+                            handleBlur('name');
                           }}
                           placeholder="Enter your full name"
                           placeholderTextColor="#999999"
                         />
-                        {values.name && !errors.name && <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />}
+                        {values.name && !errors.name &&
+                          <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />
+                        }
                       </View>
                       {touched.name && errors.name && (
                         <Text style={styles.errorText}>
@@ -666,27 +975,34 @@ const AuthScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.inputWrapper,
-                          focusedInput === "signupEmail" && styles.inputFocused,
+                          focusedInput === 'signupEmail' && styles.inputFocused,
                           touched.email && errors.email && styles.inputError,
                           values.email && !errors.email && styles.inputSuccess,
                         ]}
                       >
-                        <Icon name="mail" size={20} color={focusedInput === "signupEmail" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                        <Icon
+                          name="mail"
+                          size={20}
+                          color={focusedInput === 'signupEmail' ? '#5B37B7' : '#666666'}
+                          style={styles.inputIcon}
+                        />
                         <TextInput
                           style={styles.input}
                           value={values.email}
                           onChangeText={handleChange("email")}
-                          onFocus={() => handleInputFocus("signupEmail")}
+                          onFocus={() => handleInputFocus('signupEmail')}
                           onBlur={() => {
                             handleInputBlur();
-                            handleBlur("email");
+                            handleBlur('email');
                           }}
                           placeholder="Enter your email address"
                           keyboardType="email-address"
                           autoCapitalize="none"
                           placeholderTextColor="#999999"
                         />
-                        {values.email && !errors.email && <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />}
+                        {values.email && !errors.email &&
+                          <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />
+                        }
                       </View>
                       {touched.email && errors.email && (
                         <Text style={styles.errorText}>
@@ -700,27 +1016,34 @@ const AuthScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.inputWrapper,
-                          focusedInput === "signupPhone" && styles.inputFocused,
+                          focusedInput === 'signupPhone' && styles.inputFocused,
                           touched.phoneNumber && errors.phoneNumber && styles.inputError,
                           values.phoneNumber && !errors.phoneNumber && styles.inputSuccess,
                         ]}
                       >
-                        <Icon name="smartphone" size={20} color={focusedInput === "signupPhone" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                        <Icon
+                          name="smartphone"
+                          size={20}
+                          color={focusedInput === 'signupPhone' ? '#5B37B7' : '#666666'}
+                          style={styles.inputIcon}
+                        />
                         <TextInput
                           style={styles.input}
                           value={values.phoneNumber}
                           onChangeText={(text) => formatPhoneNumber(text, setFieldValue)}
-                          onFocus={() => handleInputFocus("signupPhone")}
+                          onFocus={() => handleInputFocus('signupPhone')}
                           onBlur={() => {
                             handleInputBlur();
-                            handleBlur("phoneNumber");
+                            handleBlur('phoneNumber');
                           }}
                           placeholder="Enter your phone number"
                           keyboardType="phone-pad"
                           maxLength={10}
                           placeholderTextColor="#999999"
                         />
-                        {values.phoneNumber && !errors.phoneNumber && <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />}
+                        {values.phoneNumber && !errors.phoneNumber &&
+                          <Icon name="check-circle" size={20} color="#4CAF50" style={styles.validIcon} />
+                        }
                       </View>
                       {touched.phoneNumber && errors.phoneNumber && (
                         <Text style={styles.errorText}>
@@ -734,27 +1057,39 @@ const AuthScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.inputWrapper,
-                          focusedInput === "signupPassword" && styles.inputFocused,
+                          focusedInput === 'signupPassword' && styles.inputFocused,
                           touched.password && errors.password && styles.inputError,
                           values.password && !errors.password && styles.inputSuccess,
                         ]}
                       >
-                        <Icon name="lock" size={20} color={focusedInput === "signupPassword" ? "#5B37B7" : "#666666"} style={styles.inputIcon} />
+                        <Icon
+                          name="lock"
+                          size={20}
+                          color={focusedInput === 'signupPassword' ? '#5B37B7' : '#666666'}
+                          style={styles.inputIcon}
+                        />
                         <TextInput
                           style={styles.input}
                           value={values.password}
                           onChangeText={handleChange("password")}
-                          onFocus={() => handleInputFocus("signupPassword")}
+                          onFocus={() => handleInputFocus('signupPassword')}
                           onBlur={() => {
                             handleInputBlur();
-                            handleBlur("password");
+                            handleBlur('password');
                           }}
                           placeholder="Create a password"
                           secureTextEntry={secureSignupPassword}
                           placeholderTextColor="#999999"
                         />
-                        <TouchableOpacity style={styles.eyeIcon} onPress={() => setSecureSignupPassword(!secureSignupPassword)}>
-                          <Icon name={secureSignupPassword ? "eye-off" : "eye"} size={20} color={focusedInput === "signupPassword" ? "#5B37B7" : "#666666"} />
+                        <TouchableOpacity
+                          style={styles.eyeIcon}
+                          onPress={() => setSecureSignupPassword(!secureSignupPassword)}
+                        >
+                          <Icon
+                            name={secureSignupPassword ? "eye-off" : "eye"}
+                            size={20}
+                            color={focusedInput === 'signupPassword' ? '#5B37B7' : '#666666'}
+                          />
                         </TouchableOpacity>
                       </View>
                       {touched.password && errors.password && (
@@ -773,7 +1108,7 @@ const AuthScreen = ({ navigation }) => {
                           values.phoneNumber === "" ||
                           values.password === "" ||
                           isSubmitting) &&
-                          styles.authButtonDisabled,
+                        styles.authButtonDisabled,
                       ]}
                       onPress={handleSubmit}
                       disabled={
@@ -863,6 +1198,10 @@ const AuthScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {renderSignupOTPModal()}
+
+      {renderVerificationModal()}
     </KeyboardAvoidingView>
   );
 };
@@ -971,7 +1310,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   inputIconFocused: {
-    color: "#5B37B7",
+    color: '#5B37B7',
   },
   validIcon: {
     marginLeft: 5,
@@ -1027,7 +1366,7 @@ const styles = StyleSheet.create({
   },
   authButtonDisabled: {
     opacity: 0.5,
-    backgroundColor: "#9B9B9B",
+    backgroundColor: '#9B9B9B',
   },
   authButtonText: {
     color: "white",
@@ -1156,35 +1495,35 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   segmentedControl: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginBottom: 20,
     borderRadius: 8,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: '#F5F5F5',
     padding: 4,
   },
   segmentButton: {
     flex: 1,
     paddingVertical: 8,
-    alignItems: "center",
+    alignItems: 'center',
   },
   segmentButtonActive: {
-    backgroundColor: "#5B37B7",
+    backgroundColor: '#5B37B7',
     borderRadius: 6,
   },
   segmentText: {
-    color: "#666666",
-    fontWeight: "600",
+    color: '#666666',
+    fontWeight: '600',
   },
   segmentTextActive: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
   },
   inputFocused: {
-    borderColor: "#5B37B7",
-    backgroundColor: "#F0EBFF",
+    borderColor: '#5B37B7',
+    backgroundColor: '#F0EBFF',
     borderWidth: 1.5,
   },
   resendContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 16,
     marginBottom: 8,
   },
@@ -1192,15 +1531,15 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   resendText: {
-    color: "#5B37B7",
+    color: '#5B37B7',
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   otpInput: {
     letterSpacing: 8,
     fontSize: 20,
-    textAlign: "center",
-    fontWeight: "600",
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });
 export default AuthScreen;

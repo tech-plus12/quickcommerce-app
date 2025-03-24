@@ -18,7 +18,9 @@ const AppNavigator = () => {
     const checkAuth = async () => {
       console.log(await AsyncStorage.getItem("authToken"));
       const token = await AsyncStorage.getItem("authToken");
-      dispatch(initializeAuth(!!token));
+      if (token) {
+        dispatch(initializeAuth());
+      }
     };
     checkAuth();
   }, [dispatch]);

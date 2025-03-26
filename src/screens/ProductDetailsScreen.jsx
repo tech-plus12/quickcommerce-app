@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, FlatList, Animated, Alert } from "react-native";
-import { HeartIcon, ShareIcon, ShoppingCartIcon, StarIcon, ChevronLeftIcon } from "react-native-heroicons/outline";
-import { HeartIcon as SolidHeartIcon } from "react-native-heroicons/solid";
+import { HeartIcon, ShareIcon, ShoppingCartIcon, StarIcon, ChevronLeftIcon, ArrowUpIcon, ArrowDownIcon } from "react-native-heroicons/outline";
+import { HeartIcon as SolidHeartIcon, StarIcon as SolidStarIcon } from "react-native-heroicons/solid";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../store/cartSlice";
 import Toast from "../components/Toast";
@@ -10,22 +10,80 @@ const { width } = Dimensions.get("window");
 
 const PRODUCT = {
   id: "1",
-  name: "Premium Wireless Earbuds",
-  price: "₹1,499",
-  originalPrice: "₹2,999",
-  discount: "50% off",
-  rating: 4.5,
-  reviews: 2345,
-  images: ["https://via.placeholder.com/400", "https://via.placeholder.com/400", "https://via.placeholder.com/400", "https://via.placeholder.com/400"],
-  description: "High-quality wireless earbuds with noise cancellation and premium sound quality.",
-  highlights: ["Active Noise Cancellation", "24-hour battery life", "Premium sound quality", "Touch controls", "Voice assistant support"],
-  specifications: {
-    "Battery Life": "24 hours",
-    "Bluetooth Version": "5.0",
-    "Charging Time": "2 hours",
-    Weight: "58g",
-    Warranty: "1 year",
+  name: "HealthCare Plus - Vitamin D3 1000 IU",
+  price: "₹299",
+  originalPrice: "₹399",
+  discount: "25% off",
+  rating: 4.3,
+  reviews: [
+    {
+      id: 1,
+      userName: "Rahul Sharma",
+      rating: 5,
+      date: "2024-03-15",
+      comment: "Excellent product! I've been taking it for 3 months and noticed significant improvement in my vitamin D levels.",
+      helpful: 12,
+      verified: true
+    },
+    {
+      id: 2,
+      userName: "Priya Patel",
+      rating: 4,
+      date: "2024-03-10",
+      comment: "Good quality supplement. Easy to swallow and reasonably priced.",
+      helpful: 8,
+      verified: true
+    },
+    {
+      id: 3,
+      userName: "Amit Kumar",
+      rating: 5,
+      date: "2024-03-05",
+      comment: "Best vitamin D supplement I've used. The tablets are small and easy to take.",
+      helpful: 15,
+      verified: true
+    },
+    {
+      id: 4,
+      userName: "Neha Gupta",
+      rating: 3,
+      date: "2024-02-28",
+      comment: "Product is okay, but the packaging could be better.",
+      helpful: 5,
+      verified: true
+    }
+  ],
+  ratingDistribution: {
+    5: 65,
+    4: 20,
+    3: 10,
+    2: 3,
+    1: 2
   },
+  images: [
+    "https://via.placeholder.com/400",
+    "https://via.placeholder.com/400",
+    "https://via.placeholder.com/400",
+    "https://via.placeholder.com/400"
+  ],
+  description: "High-quality Vitamin D3 supplement for bone health and immune system support. Each tablet contains 1000 IU of Vitamin D3.",
+  highlights: [
+    "1000 IU Vitamin D3 per tablet",
+    "Easy to swallow",
+    "Suitable for daily use",
+    "Strengthens bones and teeth",
+    "Supports immune system"
+  ],
+  specifications: {
+    "Active Ingredient": "Vitamin D3 (Cholecalciferol)",
+    "Strength": "1000 IU",
+    "Pack Size": "60 tablets",
+    "Shelf Life": "24 months",
+    "Manufacturer": "HealthCare Pharmaceuticals",
+    "Prescription Required": "No"
+  },
+  usage: "Take one tablet daily with meals or as directed by your healthcare provider.",
+  warnings: "Keep out of reach of children. Store in a cool, dry place. Do not exceed the recommended dose.",
 };
 
 const ProductDetailsScreen = ({ navigation }) => {
@@ -36,6 +94,8 @@ const ProductDetailsScreen = ({ navigation }) => {
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
   const [showToast, setShowToast] = useState(false);
+  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'highest', 'lowest'
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   const handleQuantityChange = (increment) => {
     setQuantity((prev) => Math.max(1, prev + increment));
@@ -44,6 +104,108 @@ const ProductDetailsScreen = ({ navigation }) => {
   const handleAddToCart = () => {
     dispatch(addToCart({ product: PRODUCT, quantity }));
     setShowToast(true);
+  };
+
+  const sortReviews = (reviews) => {
+    switch (sortBy) {
+      case 'newest':
+        return [...reviews].sort((a, b) => new Date(b.date) - new Date(a.date));
+      case 'highest':
+        return [...reviews].sort((a, b) => b.rating - a.rating);
+      case 'lowest':
+        return [...reviews].sort((a, b) => a.rating - b.rating);
+      default:
+        return reviews;
+    }
+  };
+
+  const renderReviewItem = ({ item }) => (
+    <View style={styles.reviewItem}>
+      <View style={styles.reviewHeader}>
+        <View style={styles.reviewUserInfo}>
+          <Text style={styles.userName}>{item.userName}</Text>
+          {item.verified && (
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedText}>Verified Purchase</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.reviewDate}>{new Date(item.date).toLocaleDateString()}</Text>
+      </View>
+      
+      <View style={styles.reviewRating}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          star <= item.rating ? (
+            <SolidStarIcon key={star} size={16} color="#ffd700" />
+          ) : (
+            <StarIcon key={star} size={16} color="#ddd" />
+          )
+        ))}
+      </View>
+      
+      <Text style={styles.reviewComment}>{item.comment}</Text>
+      
+      <View style={styles.reviewFooter}>
+        <TouchableOpacity style={styles.helpfulButton}>
+          <Text style={styles.helpfulText}>Helpful ({item.helpful})</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.reportButton}>
+          <Text style={styles.reportText}>Report</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderReviewsSection = () => {
+    const sortedReviews = sortReviews(PRODUCT.reviews);
+    const displayReviews = showAllReviews ? sortedReviews : sortedReviews.slice(0, 2);
+
+    return (
+      <View style={styles.reviewsSection}>
+        <View style={styles.reviewsHeader}>
+          <Text style={styles.sectionTitle}>Customer Reviews</Text>
+          <View style={styles.sortContainer}>
+            <TouchableOpacity 
+              style={[styles.sortButton, sortBy === 'newest' && styles.sortButtonActive]}
+              onPress={() => setSortBy('newest')}
+            >
+              <Text style={[styles.sortButtonText, sortBy === 'newest' && styles.sortButtonTextActive]}>Newest</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.sortButton, sortBy === 'highest' && styles.sortButtonActive]}
+              onPress={() => setSortBy('highest')}
+            >
+              <Text style={[styles.sortButtonText, sortBy === 'highest' && styles.sortButtonTextActive]}>Highest</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.sortButton, sortBy === 'lowest' && styles.sortButtonActive]}
+              onPress={() => setSortBy('lowest')}
+            >
+              <Text style={[styles.sortButtonText, sortBy === 'lowest' && styles.sortButtonTextActive]}>Lowest</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <FlatList
+          data={displayReviews}
+          renderItem={renderReviewItem}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+          ListEmptyComponent={
+            <Text style={styles.noReviewsText}>No reviews yet</Text>
+          }
+        />
+
+        {!showAllReviews && PRODUCT.reviews.length > 2 && (
+          <TouchableOpacity 
+            style={styles.showMoreButton}
+            onPress={() => setShowAllReviews(true)}
+          >
+            <Text style={styles.showMoreText}>Show More Reviews</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
   };
 
   const renderImageCarousel = () => (
@@ -96,6 +258,45 @@ const ProductDetailsScreen = ({ navigation }) => {
     </View>
   );
 
+  const renderRatingChart = () => {
+    const totalReviews = Object.values(PRODUCT.ratingDistribution).reduce((a, b) => a + b, 0);
+    
+    return (
+      <View style={styles.ratingChartContainer}>
+        <Text style={styles.sectionTitle}>Customer Reviews</Text>
+        <View style={styles.ratingSummary}>
+          <View style={styles.overallRating}>
+            <Text style={styles.overallRatingNumber}>{PRODUCT.rating}</Text>
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <StarIcon
+                  key={star}
+                  size={16}
+                  color={star <= Math.floor(PRODUCT.rating) ? "#ffd700" : "#ddd"}
+                />
+              ))}
+            </View>
+            <Text style={styles.totalReviews}>{totalReviews} reviews</Text>
+          </View>
+          <View style={styles.ratingBars}>
+            {[5, 4, 3, 2, 1].map((rating) => {
+              const percentage = (PRODUCT.ratingDistribution[rating] / totalReviews) * 100;
+              return (
+                <View key={rating} style={styles.ratingBarRow}>
+                  <Text style={styles.ratingLabel}>{rating} ★</Text>
+                  <View style={styles.ratingBarContainer}>
+                    <View style={[styles.ratingBar, { width: `${percentage}%` }]} />
+                  </View>
+                  <Text style={styles.ratingCount}>{PRODUCT.ratingDistribution[rating]}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Toast message={`${quantity} item${quantity > 1 ? "s" : ""} added to cart`} isVisible={showToast} onHide={() => setShowToast(false)} />
@@ -141,11 +342,19 @@ const ProductDetailsScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <View style={styles.ratingContainer}>
-            <View style={styles.ratingBadge}>
-              <Text style={styles.ratingText}>{PRODUCT.rating} ★</Text>
-            </View>
-            <Text style={styles.reviewCount}>{PRODUCT.reviews.toLocaleString()} Reviews</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.description}>{PRODUCT.description}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Usage Instructions</Text>
+            <Text style={styles.usageText}>{PRODUCT.usage}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Warnings</Text>
+            <Text style={styles.warningText}>{PRODUCT.warnings}</Text>
           </View>
 
           <View style={styles.section}>
@@ -166,6 +375,9 @@ const ProductDetailsScreen = ({ navigation }) => {
               </View>
             ))}
           </View>
+
+          {renderRatingChart()}
+          {renderReviewsSection()}
         </View>
       </ScrollView>
 
@@ -179,7 +391,8 @@ const ProductDetailsScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.bottomButton, styles.buyNowButton]}
           onPress={() => {
-            /* Handle buy now */
+            dispatch(addToCart({ product: PRODUCT, quantity }));
+            navigation.navigate('Cart');
           }}
         >
           <Text style={styles.bottomButtonText}>BUY NOW</Text>
@@ -413,6 +626,195 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#212121",
+  },
+  ratingChartContainer: {
+    marginTop: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  ratingSummary: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  overallRating: {
+    alignItems: 'center',
+    paddingRight: 24,
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+  },
+  overallRatingNumber: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#212121',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginVertical: 8,
+  },
+  totalReviews: {
+    fontSize: 14,
+    color: '#666',
+  },
+  ratingBars: {
+    flex: 1,
+    marginLeft: 24,
+  },
+  ratingBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ratingLabel: {
+    width: 40,
+    fontSize: 12,
+    color: '#666',
+  },
+  ratingBarContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+    marginHorizontal: 8,
+    overflow: 'hidden',
+  },
+  ratingBar: {
+    height: '100%',
+    backgroundColor: '#ffd700',
+    borderRadius: 4,
+  },
+  ratingCount: {
+    width: 30,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+  },
+  description: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  usageText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#ff4444',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  reviewsSection: {
+    marginTop: 24,
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  sortButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  sortButtonActive: {
+    backgroundColor: '#2874f0',
+  },
+  sortButtonText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  sortButtonTextActive: {
+    color: '#fff',
+  },
+  reviewItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#212121',
+    marginRight: 8,
+  },
+  verifiedBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  verifiedText: {
+    fontSize: 12,
+    color: '#388e3c',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  reviewFooter: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  helpfulButton: {
+    paddingVertical: 4,
+  },
+  helpfulText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  reportButton: {
+    paddingVertical: 4,
+  },
+  reportText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  showMoreButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  showMoreText: {
+    fontSize: 14,
+    color: '#2874f0',
+    fontWeight: '500',
+  },
+  noReviewsText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    paddingVertical: 24,
   },
 });
 

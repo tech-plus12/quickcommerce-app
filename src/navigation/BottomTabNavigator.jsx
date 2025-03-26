@@ -2,25 +2,24 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
-import CartScreen from '../screens/CartScreen';
-import NotificationScreen from '../screens/NotificationScreen';
-import ProductDetailsScreen from '../screens/ProductDetailsScreen';
-import CheckoutScreen from '../screens/CheckoutScreen';
-import SearchScreen from '../screens/SearchScreen';
-import OrderSuccessScreen from '../screens/OrderSuccessScreen';
-import { 
-  HomeIcon, 
-  ShoppingCartIcon, 
-  UserIcon, 
-  BellIcon 
-} from "react-native-heroicons/outline";
-import { 
-  HomeIcon as SolidHomeIcon, 
+import CartScreen from "../screens/CartScreen";
+import NotificationScreen from "../screens/NotificationScreen";
+import ProductDetailsScreen from "../screens/ProductDetailsScreen";
+import CheckoutScreen from "../screens/CheckoutScreen";
+import SearchScreen from "../screens/SearchScreen";
+import OrderSuccessScreen from "../screens/OrderSuccessScreen";
+import CategoryProductsScreen from "../screens/CategoryProductsScreen";
+import HealthPromotionsScreen from "../screens/HealthPromotionsScreen";
+import PromotionDetailsScreen from "../screens/PromotionDetailsScreen";
+import WatchLaterScreen from "../screens/WatchLaterScreen";
+import { HomeIcon, ShoppingCartIcon, UserIcon, BellIcon } from "react-native-heroicons/outline";
+import {
+  HomeIcon as SolidHomeIcon,
   ShoppingCartIcon as SolidShoppingCartIcon,
-  UserIcon as SolidUserIcon, 
-  BellIcon as SolidBellIcon 
+  UserIcon as SolidUserIcon,
+  BellIcon as SolidBellIcon,
 } from "react-native-heroicons/solid";
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator } from "@react-navigation/stack";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -30,16 +29,20 @@ const HomeStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
-      <Stack.Screen 
-        name="Search" 
+      <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
+      <Stack.Screen name="HealthPromotions" component={HealthPromotionsScreen} />
+      <Stack.Screen name="PromotionDetails" component={PromotionDetailsScreen} />
+      <Stack.Screen name="WatchLater" component={WatchLaterScreen} />
+      <Stack.Screen
+        name="Search"
         component={SearchScreen}
         options={{
-          headerShown: true,
-          title: 'Search Products',
+          headerShown: false,
+          title: "Search Products",
           headerStyle: {
-            backgroundColor: '#2874f0',
+            backgroundColor: "#2874f0",
           },
-          headerTintColor: '#fff',
+          headerTintColor: "#fff",
         }}
       />
     </Stack.Navigator>
@@ -67,8 +70,6 @@ const BottomTabNavigator = () => {
             return focused ? <SolidShoppingCartIcon size={24} color={color} /> : <ShoppingCartIcon size={22} color={color} />;
           } else if (route.name === "Notifications") {
             return focused ? <SolidBellIcon size={24} color={color} /> : <BellIcon size={22} color={color} />;
-          } else if (route.name === "Profile") {
-            return focused ? <SolidUserIcon size={24} color={color} /> : <UserIcon size={22} color={color} />;
           }
           return null;
         },
@@ -78,50 +79,51 @@ const BottomTabNavigator = () => {
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           borderTopWidth: 1,
-          borderTopColor: '#f0f0f0',
+          borderTopColor: "#f0f0f0",
           elevation: 8,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: "500",
         },
         headerStyle: {
-          backgroundColor: '#2874f0',
+          backgroundColor: "#2874f0",
           elevation: 0,
           shadowOpacity: 0,
         },
-        headerTintColor: '#ffffff',
+        headerTintColor: "#ffffff",
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
         },
         headerShown: false,
+        unmountOnBlur: true,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeStack}
         options={{
-          title: 'Home',
+          title: "Home",
         }}
       />
-      <Tab.Screen 
-        name="Cart" 
+      <Tab.Screen
+        name="Cart"
         component={CartStack}
         options={{
-          title: 'Cart',
+          title: "Cart",
         }}
       />
-      <Tab.Screen 
-        name="Notifications" 
+      <Tab.Screen
+        name="Notifications"
         component={NotificationScreen}
         options={{
-          title: 'Notifications',
+          title: "Notifications",
         }}
       />
       {/* <Tab.Screen 

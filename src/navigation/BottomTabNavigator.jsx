@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import CartScreen from "../screens/CartScreen";
-import NotificationScreen from "../screens/NotificationScreen";
+import OrderHistoryScreen from "../screens/OrderHistoryScreen";
 import ProductDetailsScreen from "../screens/ProductDetailsScreen";
 import CheckoutScreen from "../screens/CheckoutScreen";
 import SearchScreen from "../screens/SearchScreen";
@@ -12,12 +12,12 @@ import CategoryProductsScreen from "../screens/CategoryProductsScreen";
 import HealthPromotionsScreen from "../screens/HealthPromotionsScreen";
 import PromotionDetailsScreen from "../screens/PromotionDetailsScreen";
 import WatchLaterScreen from "../screens/WatchLaterScreen";
-import { HomeIcon, ShoppingCartIcon, UserIcon, BellIcon } from "react-native-heroicons/outline";
+import OrderDetailsScreen from "../screens/OrderDetailsScreen";
+import { HomeIcon, ShoppingCartIcon, ClockIcon } from "react-native-heroicons/outline";
 import {
   HomeIcon as SolidHomeIcon,
   ShoppingCartIcon as SolidShoppingCartIcon,
-  UserIcon as SolidUserIcon,
-  BellIcon as SolidBellIcon,
+  ClockIcon as SolidClockIcon,
 } from "react-native-heroicons/solid";
 import { createStackNavigator } from "@react-navigation/stack";
 
@@ -59,6 +59,15 @@ const CartStack = () => {
   );
 };
 
+const OrderHistoryStack = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="OrderHistoryList" component={OrderHistoryScreen} />
+      <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+    </Stack.Navigator>
+  );
+};
+
 const BottomTabNavigator = () => {
   return (
     <Tab.Navigator
@@ -68,8 +77,8 @@ const BottomTabNavigator = () => {
             return focused ? <SolidHomeIcon size={24} color={color} /> : <HomeIcon size={22} color={color} />;
           } else if (route.name === "Cart") {
             return focused ? <SolidShoppingCartIcon size={24} color={color} /> : <ShoppingCartIcon size={22} color={color} />;
-          } else if (route.name === "Notifications") {
-            return focused ? <SolidBellIcon size={24} color={color} /> : <BellIcon size={22} color={color} />;
+          } else if (route.name === "OrderHistory") {
+            return focused ? <SolidClockIcon size={24} color={color} /> : <ClockIcon size={22} color={color} />;
           }
           return null;
         },
@@ -120,19 +129,12 @@ const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Notifications"
-        component={NotificationScreen}
+        name="OrderHistory"
+        component={OrderHistoryStack}
         options={{
-          title: "Notifications",
+          title: "Orders",
         }}
       />
-      {/* <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{
-          title: 'Profile',
-        }}
-      /> */}
     </Tab.Navigator>
   );
 };

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from "react-native";
 import { MapPinIcon, CreditCardIcon, BanknotesIcon, QrCodeIcon, ChevronRightIcon, ShieldCheckIcon } from "react-native-heroicons/outline";
 import { useSelector, useDispatch } from "react-redux";
 import { getCartTotal, clearCart } from '../store/cartSlice';
+import { addOrder } from '../store/orderHistorySlice';
 
 const ADDRESSES = [
   {
@@ -149,7 +150,39 @@ const CheckoutScreen = ({ navigation }) => {
   );
 
   const handlePlaceOrder = () => {
-    // Add any order processing logic here
+    if (!selectedPayment) {
+      Alert.alert('Error', 'Please select a payment method');
+      return;
+    }
+
+    // Create order object with all necessary details
+    const order = {
+      id: Date.now().toString(),
+      orderNumber: `ORD${Date.now().toString().slice(-6)}`,
+      date: new Date().toISOString(),
+      total: finalTotal,
+      status: 'pending',
+      paymentMethod: selectedPayment,
+      deliveryAddress: selectedAddress,
+      items: cartItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.numericPrice,
+        image: item.image,
+      })),
+      tracking: {
+        status: 'pending',
+        steps: [
+          { title: 'Order Placed', completed: true },
+          { title: 'Processing', completed: false },
+          { title: 'Shipped', completed: false },
+          { title: 'Delivered', completed: false },
+        ],
+      },
+    };
+
+    // Add order to order history
+    dispatch(addOrder(order));
     
     // Clear the cart
     dispatch(clearCart());

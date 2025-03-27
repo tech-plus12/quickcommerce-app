@@ -6,6 +6,7 @@ import { HomeIcon, XMarkIcon, ArrowRightOnRectangleIcon, UserCircleIcon, Cog6Too
 import MyAccountScreen from "../screens/MyAccountScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import HelpSupportScreen from "../screens/HelpSupportScreen";
+import ChatScreen from "../screens/ChatScreen";
 import { useDispatch } from "react-redux";
 import { logout } from "../store/authSlice";
 
@@ -145,6 +146,14 @@ const DrawerNavigator = () => {
           }}
         />
       ))}
+      <Drawer.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          title: "Chat Support",
+          headerShown: false,
+        }}
+      />
     </Drawer.Navigator>
   );
 };

@@ -17,14 +17,17 @@ const FAQ_ITEMS = [
   },
 ];
 
-const HelpSupportScreen = () => {
+const HelpSupportScreen = ({ navigation }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.searchContainer}>
         <TextInput style={styles.searchInput} placeholder="Search for help" placeholderTextColor="#666" />
       </View>
       <View style={styles.contactContainer}>
-        <TouchableOpacity style={styles.contactOption}>
+        <TouchableOpacity 
+          style={styles.contactOption}
+          onPress={() => navigation.navigate('Chat')}
+        >
           <ChatBubbleLeftRightIcon size={24} color="#2874f0" />
           <Text style={styles.contactText}>Chat with Us</Text>
         </TouchableOpacity>

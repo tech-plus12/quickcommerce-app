@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
-import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, FlatList, Animated, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, FlatList, Animated, Alert, Modal, TextInput } from "react-native";
 import { HeartIcon, ShareIcon, ShoppingCartIcon, StarIcon, ChevronLeftIcon, ArrowUpIcon, ArrowDownIcon } from "react-native-heroicons/outline";
 import { HeartIcon as SolidHeartIcon, StarIcon as SolidStarIcon } from "react-native-heroicons/solid";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../store/cartSlice";
 import Toast from "../components/Toast";
 
@@ -93,9 +93,17 @@ const ProductDetailsScreen = ({ navigation }) => {
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
+  const cartItems = useSelector((state) => state.cart.items);
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const [showToast, setShowToast] = useState(false);
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'highest', 'lowest'
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: '',
+    userName: 'Anonymous User'
+  });
 
   const handleQuantityChange = (increment) => {
     setQuantity((prev) => Math.max(1, prev + increment));
@@ -117,6 +125,43 @@ const ProductDetailsScreen = ({ navigation }) => {
       default:
         return reviews;
     }
+  };
+
+  const handleSubmitReview = () => {
+    if (!reviewForm.comment.trim()) {
+      Alert.alert('Error', 'Please enter your review comment');
+      return;
+    }
+
+    const newReview = {
+      id: PRODUCT.reviews.length + 1,
+      userName: reviewForm.userName,
+      rating: reviewForm.rating,
+      date: new Date().toISOString().split('T')[0],
+      comment: reviewForm.comment,
+      helpful: 0,
+      verified: true
+    };
+
+    // In a real app, you would make an API call here to save the review
+    // For now, we'll just show a success message
+    Alert.alert(
+      'Success',
+      'Thank you for your review!',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            setShowReviewModal(false);
+            setReviewForm({
+              rating: 5,
+              comment: '',
+              userName: 'Anonymous User'
+            });
+          }
+        }
+      ]
+    );
   };
 
   const renderReviewItem = ({ item }) => (
@@ -163,7 +208,15 @@ const ProductDetailsScreen = ({ navigation }) => {
     return (
       <View style={styles.reviewsSection}>
         <View style={styles.reviewsHeader}>
-          <Text style={styles.sectionTitle}>Customer Reviews</Text>
+          <View style={styles.reviewsHeaderTop}>
+            <Text style={styles.sectionTitle}>Customer Reviews</Text>
+            <TouchableOpacity
+              style={styles.writeReviewButton}
+              onPress={() => setShowReviewModal(true)}
+            >
+              <Text style={styles.writeReviewButtonText}>Write a Review</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.sortContainer}>
             <TouchableOpacity 
               style={[styles.sortButton, sortBy === 'newest' && styles.sortButtonActive]}
@@ -297,6 +350,60 @@ const ProductDetailsScreen = ({ navigation }) => {
     );
   };
 
+  const renderReviewModal = () => (
+    <Modal
+      visible={showReviewModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowReviewModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Write a Review</Text>
+            <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.ratingInput}>
+            <Text style={styles.ratingLabel}>Your Rating:</Text>
+            <View style={styles.starsInput}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setReviewForm({ ...reviewForm, rating: star })}
+                >
+                  {star <= reviewForm.rating ? (
+                    <SolidStarIcon size={32} color="#ffd700" />
+                  ) : (
+                    <StarIcon size={32} color="#ddd" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TextInput
+            style={styles.reviewInput}
+            multiline
+            numberOfLines={4}
+            placeholder="Write your review here..."
+            value={reviewForm.comment}
+            onChangeText={(text) => setReviewForm({ ...reviewForm, comment: text })}
+          />
+
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmitReview}
+          >
+            <Text style={styles.submitButtonText}>Submit Review</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <Toast message={`${quantity} item${quantity > 1 ? "s" : ""} added to cart`} isVisible={showToast} onHide={() => setShowToast(false)} />
@@ -309,6 +416,19 @@ const ProductDetailsScreen = ({ navigation }) => {
         <View style={styles.headerRight}>
           <TouchableOpacity onPress={() => setIsFavorite(!isFavorite)} style={styles.headerButton}>
             {isFavorite ? <SolidHeartIcon size={24} color="#ff4444" /> : <HeartIcon size={24} color="#fff" />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Cart')}
+          >
+            <ShoppingCartIcon size={24} color="#fff" />
+            {cartCount > 0 && (
+              <View style={styles.headerBadge}>
+                <Text style={styles.headerBadgeText}>
+                  {cartCount > 99 ? '99+' : cartCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton}>
             <ShareIcon size={24} color="#fff" />
@@ -398,6 +518,7 @@ const ProductDetailsScreen = ({ navigation }) => {
           <Text style={styles.bottomButtonText}>BUY NOW</Text>
         </TouchableOpacity>
       </View>
+      {renderReviewModal()}
     </View>
   );
 };
@@ -713,14 +834,37 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   reviewsHeader: {
+    marginBottom: 16,
+  },
+  reviewsHeaderTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  writeReviewButton: {
+    backgroundColor: '#2874f0',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  writeReviewButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   sortContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 8,
   },
   sortButton: {
     paddingHorizontal: 12,
@@ -815,6 +959,80 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     paddingVertical: 24,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#212121',
+  },
+  closeButton: {
+    fontSize: 24,
+    color: '#666',
+  },
+  ratingInput: {
+    marginBottom: 20,
+  },
+  starsInput: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    height: 120,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  submitButton: {
+    backgroundColor: '#2874f0',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerBadge: {
+    position: 'absolute',
+    right: -4,
+    top: -4,
+    backgroundColor: '#ff4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  headerBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

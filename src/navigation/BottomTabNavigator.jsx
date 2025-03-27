@@ -1,5 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { View, Text, StyleSheet } from "react-native";
+import { useSelector } from "react-redux";
 import HomeScreen from "../screens/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import CartScreen from "../screens/CartScreen";
@@ -13,6 +15,7 @@ import HealthPromotionsScreen from "../screens/HealthPromotionsScreen";
 import PromotionDetailsScreen from "../screens/PromotionDetailsScreen";
 import WatchLaterScreen from "../screens/WatchLaterScreen";
 import OrderDetailsScreen from "../screens/OrderDetailsScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 import { HomeIcon, ShoppingCartIcon, ClockIcon } from "react-native-heroicons/outline";
 import {
   HomeIcon as SolidHomeIcon,
@@ -33,6 +36,7 @@ const HomeStack = () => {
       <Stack.Screen name="HealthPromotions" component={HealthPromotionsScreen} />
       <Stack.Screen name="PromotionDetails" component={PromotionDetailsScreen} />
       <Stack.Screen name="WatchLater" component={WatchLaterScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen
         name="Search"
         component={SearchScreen}
@@ -68,6 +72,28 @@ const OrderHistoryStack = () => {
   );
 };
 
+const CartIconWithBadge = ({ focused, color, size }) => {
+  const cartItems = useSelector((state) => state.cart.items);
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  return (
+    <View>
+      {focused ? (
+        <SolidShoppingCartIcon size={24} color={color} />
+      ) : (
+        <ShoppingCartIcon size={22} color={color} />
+      )}
+      {cartCount > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {cartCount > 99 ? '99+' : cartCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 const BottomTabNavigator = () => {
   return (
     <Tab.Navigator
@@ -76,7 +102,7 @@ const BottomTabNavigator = () => {
           if (route.name === "Home") {
             return focused ? <SolidHomeIcon size={24} color={color} /> : <HomeIcon size={22} color={color} />;
           } else if (route.name === "Cart") {
-            return focused ? <SolidShoppingCartIcon size={24} color={color} /> : <ShoppingCartIcon size={22} color={color} />;
+            return <CartIconWithBadge focused={focused} color={color} size={size} />;
           } else if (route.name === "OrderHistory") {
             return focused ? <SolidClockIcon size={24} color={color} /> : <ClockIcon size={22} color={color} />;
           }
@@ -138,5 +164,25 @@ const BottomTabNavigator = () => {
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    right: -6,
+    top: -3,
+    backgroundColor: '#ff4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+});
 
 export default BottomTabNavigator;

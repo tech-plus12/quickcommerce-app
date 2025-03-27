@@ -172,7 +172,6 @@ const FLASH_SALE = {
 
 const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [cartCount, setCartCount] = useState(2);
   const [notificationCount, setNotificationCount] = useState(3);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -184,6 +183,9 @@ const HomeScreen = ({ navigation }) => {
 
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const watchLaterItems = useSelector((state) => state.watchLater.items);
+  const watchLaterCount = watchLaterItems.length;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -244,6 +246,13 @@ const HomeScreen = ({ navigation }) => {
           onPress={() => navigation.navigate("WatchLater")}
         >
           <ClockIcon size={24} color="#fff" />
+          {watchLaterCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {watchLaterCount > 99 ? '99+' : watchLaterCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.iconButton} 
@@ -263,7 +272,9 @@ const HomeScreen = ({ navigation }) => {
           <ShoppingCartIcon size={24} color="#fff" />
           {cartCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{cartCount}</Text>
+              <Text style={styles.badgeText}>
+                {cartCount > 99 ? '99+' : cartCount}
+              </Text>
             </View>
           )}
         </TouchableOpacity>

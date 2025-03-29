@@ -7,6 +7,7 @@ import { initializeAuth } from "../store/authSlice";
 import LoginScreen from "../screens/LoginScreen";
 import DrawerNavigator from "./DrawerNavigator";
 import OnboardingScreen from "../screens/OnboardingScreen";
+import PromiseReportScreen from "../screens/PromiseReportScreen";
 
 const Stack = createStackNavigator();
 

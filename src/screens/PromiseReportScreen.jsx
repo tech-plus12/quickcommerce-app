@@ -48,7 +48,7 @@ const PromiseReportScreen = () => {
       const data = JSON.stringify({
         startDate: formatDate(startDate),
         endDate: formatDate(endDate),
-        orgid: 18, // Changed to match working config
+        orgid: 18,
         agent_id: 37,
       });
 
@@ -63,10 +63,7 @@ const PromiseReportScreen = () => {
         data: data,
       };
 
-      console.log("Request Data:", data);
       const response = await axios(config);
-
-      console.log("API Response:", response.data);
 
       if (response.data && response.data.status === "ok") {
         setData(response.data.data || []);
@@ -74,7 +71,6 @@ const PromiseReportScreen = () => {
         updateSummary(response.data.data || []);
         updateAgentsList(response.data.data || []);
       } else {
-        console.warn("Invalid response format:", response.data);
         setData([]);
         setFilteredData([]);
       }

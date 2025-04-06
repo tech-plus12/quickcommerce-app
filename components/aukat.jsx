@@ -32,7 +32,7 @@ const Aukat = () => {
       [
         {
           text: "I Understand",
-          onPress: () => console.log("User acknowledged restriction"),
+
           style: "default",
         },
       ],

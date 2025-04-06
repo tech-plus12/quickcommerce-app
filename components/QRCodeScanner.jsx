@@ -90,7 +90,7 @@ export default function App() {
       const { data, bounds, type } = event?.nativeEvent;
       setScannedData({ data, bounds, type });
       playSuccessAnimation();
-      console.log("Barcode / QR Code scanned:", data, bounds, type);
+      console..log("Barcode / QR Code scanned:", data, bounds, type);
 
       // Important: Stop scanning after successful scan
       stopScanning();
@@ -124,7 +124,7 @@ export default function App() {
     if (scannerRef?.current) {
       Commands.stopScanning(scannerRef?.current);
       setIsActive(false);
-      console.log("Scanning paused");
+      console..log("Scanning paused");
     }
   };
 
@@ -136,7 +136,7 @@ export default function App() {
       // Then resume scanning and update the state
       Commands.resumeScanning(scannerRef?.current);
       setIsActive(true);
-      console.log("Scanning resumed");
+      console..log("Scanning resumed");
     }
   };
 

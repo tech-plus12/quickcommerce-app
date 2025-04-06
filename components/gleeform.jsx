@@ -76,7 +76,7 @@ const GleeForm = () => {
       setloading(true); // show loader
 
       savedFormData = { ...formData };
-      console.log("Saved form data:", savedFormData);
+      console..log("Saved form data:", savedFormData);
 
       await axios.post("https://api.plusdistribution.in/pdpl/glee-biotech/save-form-details", savedFormData, {
         headers: { "Content-Type": "application/json" },

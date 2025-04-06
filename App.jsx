@@ -4,6 +4,7 @@ import DrawerNavigator from "./src/navigation/DrawerNavigator";
 import { Provider } from "react-redux";
 import { store } from "./src/store/store";
 import { CartProvider } from "./src/context/CartContext";
+import Toast from 'react-native-toast-message';
 
 
 
@@ -19,6 +20,7 @@ const App = () => {
           </NavigationContainer>
         </AppNavigator>
       </CartProvider>
+      <Toast />
     </Provider>
   );
 };

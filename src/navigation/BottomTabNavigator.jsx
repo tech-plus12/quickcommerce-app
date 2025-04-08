@@ -16,6 +16,7 @@ import PromotionDetailsScreen from "../screens/PromotionDetailsScreen";
 import WatchLaterScreen from "../screens/WatchLaterScreen";
 import OrderDetailsScreen from "../screens/OrderDetailsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import SaleDetailsScreen from "../screens/SaleDetailsScreen";
 import { HomeIcon, ShoppingCartIcon, ClockIcon } from "react-native-heroicons/outline";
 import {
   HomeIcon as SolidHomeIcon,
@@ -37,6 +38,7 @@ const HomeStack = () => {
       <Stack.Screen name="PromotionDetails" component={PromotionDetailsScreen} />
       <Stack.Screen name="WatchLater" component={WatchLaterScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="SaleDetails" component={SaleDetailsScreen} />
       <Stack.Screen
         name="Search"
         component={SearchScreen}

@@ -15,7 +15,7 @@ const WatchLaterScreen = ({ navigation }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.itemCard}
-      onPress={() => navigation.navigate('ProductDetails', { product: item })}
+      onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
     >
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.itemInfo}>
@@ -51,7 +51,7 @@ const WatchLaterScreen = ({ navigation }) => {
           <Text style={styles.emptyText}>No items in your watch later list</Text>
           <TouchableOpacity 
             style={styles.shopNowButton}
-            onPress={() => navigation.navigate('HomeScreen')}
+            onPress={() => navigation.navigate('Home')}
           >
             <Text style={styles.shopNowText}>Start Shopping</Text>
           </TouchableOpacity>

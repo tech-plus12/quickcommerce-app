@@ -37,6 +37,10 @@ const SearchScreen = ({ navigation }) => {
     setSearchResults(results);
   };
 
+  const isItemInCart = (productId) => {
+    return cartItems.some(item => item.product.id === productId);
+  };
+
   const handleAddToCart = (product) => {
     dispatch(addToCart({ product, quantity: 1 }));
   };
@@ -58,9 +62,18 @@ const SearchScreen = ({ navigation }) => {
           )}
         </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.addToCartButton} onPress={() => handleAddToCart(item)}>
-        <PlusIcon size={16} color="#fff" />
-        <Text style={styles.addToCartText}>Add</Text>
+      <TouchableOpacity 
+        style={[
+          styles.addToCartButton,
+          isItemInCart(item.id) && styles.addedToCartButton
+        ]} 
+        onPress={() => handleAddToCart(item)}
+        disabled={isItemInCart(item.id)}
+      >
+        {!isItemInCart(item.id) && <PlusIcon size={16} color="#fff" />}
+        <Text style={styles.addToCartText}>
+          {isItemInCart(item.id) ? "Added" : "Add"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -163,6 +176,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    minWidth: 70,
+    justifyContent: 'center',
+  },
+  addedToCartButton: {
+    backgroundColor: "#388e3c",
   },
   addToCartText: {
     color: "#fff",

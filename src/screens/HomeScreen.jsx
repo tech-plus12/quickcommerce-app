@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
-import { MagnifyingGlassIcon, ShoppingCartIcon, BellIcon, ChevronRightIcon, PlusIcon, ClockIcon, FireIcon } from "react-native-heroicons/outline";
+import { View, Text, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, FlatList, ActivityIndicator, Animated } from "react-native";
+import { MagnifyingGlassIcon, ShoppingCartIcon, BellIcon, ChevronRightIcon, PlusIcon, ClockIcon, FireIcon, CheckCircleIcon } from "react-native-heroicons/outline";
 import { FireIcon as SolidFireIcon } from "react-native-heroicons/solid";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../store/cartSlice";
 import { addToWatchLater } from "../store/watchLaterSlice";
+import { DocumentTextIcon } from "react-native-heroicons/outline";
 
 const CATEGORIES = [
   { id: "1", name: "Medicines", icon: "💊" },
@@ -82,37 +83,46 @@ const HEALTH_TIPS = [
 const DUMMY_PRODUCTS = [
   {
     id: "1",
-    name: "Paracetamol 500mg",
-    price: "₹49",
-    originalPrice: "₹65",
-    image: "https://via.placeholder.com/200",
-    rating: 4.5,
-    reviews: 2345,
+    name: "Amoxicillin 500mg",
+    price: "₹299",
+    originalPrice: "₹399",
     discount: "25% off",
-    prescription: false,
+    rating: 4.3,
+    reviews: 2345,
+    image: "https://via.placeholder.com/200",
+    prescription: true,
   },
   {
     id: "2",
     name: "Vitamin C 1000mg",
-    price: "₹299",
+    price: "₹199",
+    originalPrice: "₹299",
+    discount: "33% off",
+    rating: 4.5,
+    reviews: 1890,
     image: "https://via.placeholder.com/200",
-    rating: 4.2,
     prescription: false,
   },
   {
     id: "3",
-    name: "Blood Pressure Monitor",
-    price: "₹1,999",
+    name: "Azithromycin 250mg",
+    price: "₹349",
+    originalPrice: "₹449",
+    discount: "22% off",
+    rating: 4.2,
+    reviews: 1567,
     image: "https://via.placeholder.com/200",
-    rating: 4.7,
-    prescription: false,
+    prescription: true,
   },
   {
     id: "4",
-    name: "First Aid Kit",
-    price: "₹899",
+    name: "Paracetamol 500mg",
+    price: "₹49",
+    originalPrice: "₹65",
+    discount: "25% off",
+    rating: 4.5,
+    reviews: 2345,
     image: "https://via.placeholder.com/200",
-    rating: 4.0,
     prescription: false,
   },
   {
@@ -121,6 +131,7 @@ const DUMMY_PRODUCTS = [
     price: "₹199",
     image: "https://via.placeholder.com/200",
     rating: 4.3,
+    reviews: 890,
     prescription: false,
   },
   {
@@ -129,6 +140,7 @@ const DUMMY_PRODUCTS = [
     price: "₹299",
     image: "https://via.placeholder.com/200",
     rating: 4.6,
+    reviews: 1200,
     prescription: false,
   },
 ];
@@ -170,6 +182,37 @@ const FLASH_SALE = {
   ]
 };
 
+const SALE_DETAILS = {
+  title: "Special Offers",
+  endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+  products: [
+    {
+      id: "sale1",
+      name: "Premium Health Kit",
+      price: "₹999",
+      originalPrice: "₹1499",
+      discount: "33% off",
+      image: "https://via.placeholder.com/200",
+      description: "Complete health monitoring kit with digital thermometer and blood pressure monitor",
+      features: ["Digital Thermometer", "Blood Pressure Monitor", "Pulse Oximeter"],
+      soldPercentage: 30,
+      totalStock: 50
+    },
+    {
+      id: "sale2",
+      name: "Wellness Package",
+      price: "₹799",
+      originalPrice: "₹1299",
+      discount: "38% off",
+      image: "https://via.placeholder.com/200",
+      description: "Essential wellness products for daily health maintenance",
+      features: ["Multivitamins", "Omega-3", "Probiotics"],
+      soldPercentage: 45,
+      totalStock: 75
+    }
+  ]
+};
+
 const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [notificationCount, setNotificationCount] = useState(3);
@@ -180,6 +223,11 @@ const HomeScreen = ({ navigation }) => {
     minutes: 0,
     seconds: 0
   });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [addedItems, setAddedItems] = useState(new Set());
+  const [addButtonScales] = useState(() => new Map());
 
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
@@ -210,18 +258,70 @@ const HomeScreen = ({ navigation }) => {
   const handleSearch = (text) => {
     setSearchQuery(text);
     setIsSearching(!!text);
+    setPage(1);
+    setHasMore(true);
 
     if (text.trim() === "") {
       setSearchResults([]);
       return;
     }
 
-    const results = DUMMY_PRODUCTS.filter((product) => product.name.toLowerCase().includes(text.toLowerCase()));
-    setSearchResults(results);
+    // Simulate API call with pagination
+    const results = DUMMY_PRODUCTS.filter((product) => 
+      product.name.toLowerCase().includes(text.toLowerCase())
+    );
+    setSearchResults(results.slice(0, 10)); // Show first 10 results
+  };
+
+  const loadMoreResults = () => {
+    if (!hasMore || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    
+    // Simulate API call delay
+    setTimeout(() => {
+      const startIndex = page * 10;
+      const results = DUMMY_PRODUCTS.filter((product) => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      
+      const newResults = results.slice(startIndex, startIndex + 10);
+      if (newResults.length > 0) {
+        setSearchResults(prev => [...prev, ...newResults]);
+        setPage(prev => prev + 1);
+      } else {
+        setHasMore(false);
+      }
+      setIsLoadingMore(false);
+    }, 1000);
+  };
+
+  const getAddButtonScale = (productId) => {
+    if (!addButtonScales.has(productId)) {
+      addButtonScales.set(productId, new Animated.Value(1));
+    }
+    return addButtonScales.get(productId);
+  };
+
+  const animateAddButton = (productId) => {
+    const scaleValue = getAddButtonScale(productId);
+    Animated.sequence([
+      Animated.timing(scaleValue, {
+        toValue: 0.8,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const handleAddToCart = (product) => {
     dispatch(addToCart({ product, quantity: 1 }));
+    setAddedItems(prev => new Set([...prev, product.id]));
   };
 
   const handleAddToWatchLater = (product) => {
@@ -320,8 +420,19 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('PromotionDetails', { 
               promotion: {
                 ...deal,
-                validUntil: "31 Dec 2024",
-                terms: "Valid on all products in this category"
+                validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                }),
+                terms: [
+                  "Valid on selected products only",
+                  "Cannot be combined with other offers",
+                  "Prescription items may be excluded",
+                  "Subject to availability",
+                  "Prices and offers may vary"
+                ],
+                description: deal.description + ". Take advantage of this limited-time offer and save on your healthcare needs."
               }
             })}
           >
@@ -361,13 +472,24 @@ const HomeScreen = ({ navigation }) => {
     <TouchableOpacity 
       key={item.id} 
       style={styles.productCard} 
-      onPress={() => navigation.navigate("ProductDetails", { product: item })}
+      onPress={() => navigation.navigate("ProductDetails", { productId: item.id })}
     >
       <Image source={{ uri: item.image }} style={styles.productImage} />
       <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>
-          {item.name}
-        </Text>
+        <View style={styles.productHeader}>
+          <Text style={styles.productName} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <TouchableOpacity 
+            style={styles.watchLaterButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleAddToWatchLater(item);
+            }}
+          >
+            <ClockIcon size={20} color={watchLaterItems.some(wlItem => wlItem.id === item.id) ? "#2874f0" : "#666"} />
+          </TouchableOpacity>
+        </View>
         <View style={styles.priceContainer}>
           <Text style={styles.productPrice}>{item.price}</Text>
           {item.originalPrice && <Text style={styles.originalPrice}>{item.originalPrice}</Text>}
@@ -378,12 +500,11 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.rating}>{item.rating} ★</Text>
             <Text style={styles.reviews}>({item.reviews})</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.watchLaterButton}
-            onPress={() => handleAddToWatchLater(item)}
-          >
-            <ClockIcon size={20} color="#2874f0" />
-          </TouchableOpacity>
+          {item.prescription && (
+            <View style={styles.prescriptionBadge}>
+              <Text style={styles.prescriptionText}>Rx Required</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -391,24 +512,67 @@ const HomeScreen = ({ navigation }) => {
 
   const renderSearchResults = () => (
     <View style={styles.searchResultsContainer}>
-      {searchResults.map((item) => (
-        <View key={item.id} style={styles.searchResultItem}>
-          <TouchableOpacity style={styles.searchResultContent} onPress={() => navigation.navigate("ProductDetails", { product: item })}>
-            <Image source={{ uri: item.image }} style={styles.searchResultImage} />
-            <View style={styles.searchResultInfo}>
-              <Text style={styles.searchResultName} numberOfLines={1}>
-                {item.name}
+      <FlatList
+        data={searchResults}
+        renderItem={({ item }) => (
+          <View style={styles.searchResultItem}>
+            <TouchableOpacity 
+              style={styles.searchResultContent} 
+              onPress={() => navigation.navigate("ProductDetails", { productId: item.id })}
+            >
+              <Image source={{ uri: item.image }} style={styles.searchResultImage} />
+              <View style={styles.searchResultInfo}>
+                <Text style={styles.searchResultName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <View style={styles.priceRow}>
+                  <Text style={styles.searchResultPrice}>{item.price}</Text>
+                  {item.originalPrice && (
+                    <Text style={styles.searchResultOriginalPrice}>{item.originalPrice}</Text>
+                  )}
+                  {item.discount && (
+                    <Text style={styles.searchResultDiscount}>{item.discount}</Text>
+                  )}
+                </View>
+                {item.prescription && (
+                  <View style={styles.searchPrescriptionBadge}>
+                    <DocumentTextIcon size={12} color="#ff4444" />
+                    <Text style={styles.searchPrescriptionText}>Rx Required</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.addToCartButton,
+                addedItems.has(item.id) && styles.addedToCartButton
+              ]} 
+              onPress={() => handleAddToCart(item)}
+              disabled={addedItems.has(item.id)}
+            >
+              <Text style={styles.addToCartText}>
+                {addedItems.has(item.id) ? "Added" : "+ Add"}
               </Text>
-              <Text style={styles.searchResultPrice}>{item.price}</Text>
-              {item.originalPrice && <Text style={styles.searchResultOriginalPrice}>{item.originalPrice}</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
+        keyExtractor={(item) => item.id}
+        onEndReached={loadMoreResults}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() => (
+          isLoadingMore ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator size="small" color="#2874f0" />
+              <Text style={styles.loadingMoreText}>Loading more products...</Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.addToCartButton} onPress={() => handleAddToCart(item)}>
-            <PlusIcon size={16} color="#fff" />
-            <Text style={styles.addToCartText}>Add</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+          ) : !hasMore && searchResults.length > 0 ? (
+            <Text style={styles.noMoreResults}>No more products found</Text>
+          ) : null
+        )}
+        ListEmptyComponent={
+          <Text style={styles.noResultsText}>No products found</Text>
+        }
+      />
     </View>
   );
 
@@ -416,30 +580,26 @@ const HomeScreen = ({ navigation }) => {
     <View style={styles.flashSaleContainer}>
       <View style={styles.flashSaleHeader}>
         <View style={styles.flashSaleTitleContainer}>
-          <SolidFireIcon size={24} color="#ff4444" />
-          <Text style={styles.flashSaleTitle}>Flash Sale</Text>
+          <SolidFireIcon size={24} color="#ff6b6b" />
+          <Text style={styles.flashSaleTitle}>{FLASH_SALE.title}</Text>
         </View>
-        <View style={styles.countdownContainer}>
-          <Text style={styles.countdownLabel}>Ends in:</Text>
-          <View style={styles.countdownTimer}>
-            <View style={styles.timerBox}>
-              <Text style={styles.timerValue}>{timeLeft.hours.toString().padStart(2, '0')}</Text>
-              <Text style={styles.timerLabel}>Hrs</Text>
-            </View>
-            <Text style={styles.timerSeparator}>:</Text>
-            <View style={styles.timerBox}>
-              <Text style={styles.timerValue}>{timeLeft.minutes.toString().padStart(2, '0')}</Text>
-              <Text style={styles.timerLabel}>Min</Text>
-            </View>
-            <Text style={styles.timerSeparator}>:</Text>
-            <View style={styles.timerBox}>
-              <Text style={styles.timerValue}>{timeLeft.seconds.toString().padStart(2, '0')}</Text>
-              <Text style={styles.timerLabel}>Sec</Text>
-            </View>
+        <View style={styles.timerContainer}>
+          <View style={styles.timerBox}>
+            <Text style={styles.timerValue}>{timeLeft.hours.toString().padStart(2, "0")}</Text>
+            <Text style={styles.timerLabel}>HRS</Text>
+          </View>
+          <Text style={styles.timerSeparator}>:</Text>
+          <View style={styles.timerBox}>
+            <Text style={styles.timerValue}>{timeLeft.minutes.toString().padStart(2, "0")}</Text>
+            <Text style={styles.timerLabel}>MIN</Text>
+          </View>
+          <Text style={styles.timerSeparator}>:</Text>
+          <View style={styles.timerBox}>
+            <Text style={styles.timerValue}>{timeLeft.seconds.toString().padStart(2, "0")}</Text>
+            <Text style={styles.timerLabel}>SEC</Text>
           </View>
         </View>
       </View>
-
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -449,7 +609,7 @@ const HomeScreen = ({ navigation }) => {
           <TouchableOpacity 
             key={product.id}
             style={styles.flashSaleCard}
-            onPress={() => navigation.navigate("ProductDetails", { product })}
+            onPress={() => navigation.navigate("ProductDetails", { productId: product.id })}
           >
             <Image source={{ uri: product.image }} style={styles.flashSaleImage} />
             <View style={styles.flashSaleInfo}>
@@ -481,19 +641,75 @@ const HomeScreen = ({ navigation }) => {
     </View>
   );
 
+  const renderSaleDetails = () => (
+    <View style={styles.saleDetailsContainer}>
+      <View style={styles.saleDetailsHeader}>
+        <View style={styles.saleDetailsTitleContainer}>
+          <Text style={styles.saleDetailsTitle}>{SALE_DETAILS.title}</Text>
+          <Text style={styles.saleDetailsSubtitle}>
+            Ends in {Math.ceil((SALE_DETAILS.endTime - new Date()) / (1000 * 60 * 60 * 24))} days
+          </Text>
+        </View>
+      </View>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.saleDetailsScroll}
+      >
+        {SALE_DETAILS.products.map((product) => (
+          <TouchableOpacity 
+            key={product.id}
+            style={styles.saleDetailsCard}
+            onPress={() => navigation.navigate("SaleDetails")}
+          >
+            <Image source={{ uri: product.image }} style={styles.saleDetailsImage} />
+            <View style={styles.saleDetailsInfo}>
+              <Text style={styles.saleDetailsProductName} numberOfLines={2}>
+                {product.name}
+              </Text>
+              <Text style={styles.saleDetailsDescription} numberOfLines={2}>
+                {product.description}
+              </Text>
+              <View style={styles.saleDetailsPriceContainer}>
+                <Text style={styles.saleDetailsPrice}>{product.price}</Text>
+                <Text style={styles.saleDetailsOriginalPrice}>{product.originalPrice}</Text>
+                <Text style={styles.saleDetailsDiscount}>{product.discount}</Text>
+              </View>
+              <View style={styles.saleDetailsFeatures}>
+                {product.features.map((feature, index) => (
+                  <Text key={index} style={styles.saleDetailsFeature}>• {feature}</Text>
+                ))}
+              </View>
+              <View style={styles.stockContainer}>
+                <View style={styles.stockBar}>
+                  <View 
+                    style={[
+                      styles.stockProgress, 
+                      { width: `${product.soldPercentage}%` }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.stockText}>
+                  {product.totalStock - (product.totalStock * product.soldPercentage / 100)} left
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {renderHeader()}
       <ScrollView showsVerticalScrollIndicator={false}>
         {isSearching ? (
-          searchResults.length > 0 ? (
-            renderSearchResults()
-          ) : (
-            <Text style={styles.noResultsText}>No products found</Text>
-          )
+          renderSearchResults()
         ) : (
           <>
             {renderFlashSale()}
+            {renderSaleDetails()}
             {renderCategories()}
             {renderDeals()}
             {renderHealthTips()}
@@ -725,10 +941,15 @@ const styles = StyleSheet.create({
   productInfo: {
     padding: 12,
   },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
   productName: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 8,
     color: "#212121",
   },
   priceContainer: {
@@ -776,62 +997,92 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 12,
   },
+  searchResultItem: {
+    flexDirection: "row",
+    padding: 12,
+    backgroundColor: "#fff",
+    marginBottom: 1,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
   searchResultContent: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
   },
-  searchResultItem: {
-    flexDirection: "row",
-    padding: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   searchResultImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
   },
   searchResultInfo: {
-    marginLeft: 12,
     flex: 1,
+    marginLeft: 12,
   },
   searchResultName: {
     fontSize: 14,
+    fontWeight: "500",
     color: "#212121",
+    marginBottom: 4,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
   },
   searchResultPrice: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
-    color: "#2874f0",
-    marginTop: 4,
+    color: "#212121",
   },
   searchResultOriginalPrice: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#666",
     textDecorationLine: "line-through",
-    marginTop: 2,
+    marginLeft: 8,
+  },
+  searchResultDiscount: {
+    fontSize: 14,
+    color: "#388e3c",
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  addButtonContainer: {
+    marginLeft: 12,
   },
   addToCartButton: {
     backgroundColor: "#2874f0",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
-    marginLeft: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addedToCartButton: {
+    backgroundColor: "#388e3c",
   },
   addToCartText: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  searchPrescriptionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3f3',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  searchPrescriptionText: {
+    color: '#ff4444',
+    fontSize: 10,
+    fontWeight: '500',
     marginLeft: 4,
   },
   noResultsText: {
@@ -846,10 +1097,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
+  prescriptionBadge: {
+    backgroundColor: '#fff3f3',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  prescriptionText: {
+    color: '#ff4444',
+    fontSize: 12,
+    fontWeight: '500',
+  },
   watchLaterButton: {
-    padding: 8,
-    backgroundColor: '#f0f7ff',
-    borderRadius: 20,
+    padding: 4,
+    marginLeft: 8,
   },
   flashSaleContainer: {
     backgroundColor: "#fff",
@@ -872,40 +1134,32 @@ const styles = StyleSheet.create({
     color: "#212121",
     marginLeft: 8,
   },
-  countdownContainer: {
+  timerContainer: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  countdownLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginRight: 8,
-  },
-  countdownTimer: {
-    flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   timerBox: {
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    minWidth: 40,
     alignItems: "center",
+    minWidth: 40,
   },
   timerValue: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#ff4444",
+    color: "#ff6b6b",
   },
   timerLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#666",
+    marginTop: 2,
   },
   timerSeparator: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#ff4444",
+    color: "#ff6b6b",
     marginHorizontal: 4,
   },
   flashSaleScroll: {
@@ -915,25 +1169,26 @@ const styles = StyleSheet.create({
     width: 200,
     marginRight: 16,
     backgroundColor: "#fff",
-    borderRadius: 8,
-    elevation: 2,
+    borderRadius: 12,
+    elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    overflow: "hidden",
   },
   flashSaleImage: {
     width: "100%",
     height: 150,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   flashSaleInfo: {
     padding: 12,
   },
   flashSaleProductName: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#212121",
     marginBottom: 8,
   },
@@ -941,11 +1196,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
+    flexWrap: "wrap",
   },
   flashSalePrice: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#ff4444",
+    color: "#ff6b6b",
   },
   flashSaleOriginalPrice: {
     fontSize: 14,
@@ -954,10 +1210,14 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   flashSaleDiscount: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#388e3c",
-    fontWeight: "500",
+    fontWeight: "600",
     marginLeft: 8,
+    backgroundColor: "#e8f5e9",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   stockContainer: {
     marginTop: 8,
@@ -970,13 +1230,119 @@ const styles = StyleSheet.create({
   },
   stockProgress: {
     height: "100%",
-    backgroundColor: "#ff4444",
+    backgroundColor: "#ff6b6b",
     borderRadius: 2,
   },
   stockText: {
     fontSize: 12,
     color: "#666",
     marginTop: 4,
+  },
+  loadingMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingMoreText: {
+    marginLeft: 8,
+    color: '#666',
+    fontSize: 14,
+  },
+  noMoreResults: {
+    textAlign: 'center',
+    padding: 16,
+    color: '#666',
+    fontSize: 14,
+  },
+  saleDetailsContainer: {
+    backgroundColor: "#fff",
+    padding: 16,
+    marginBottom: 8,
+  },
+  saleDetailsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  saleDetailsTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  saleDetailsTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#212121",
+    marginLeft: 8,
+  },
+  saleDetailsSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginLeft: 8,
+  },
+  saleDetailsScroll: {
+    marginTop: 8,
+  },
+  saleDetailsCard: {
+    width: 280,
+    marginRight: 16,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  saleDetailsImage: {
+    width: "100%",
+    height: 140,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  saleDetailsInfo: {
+    padding: 12,
+  },
+  saleDetailsProductName: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#212121",
+    marginBottom: 4,
+  },
+  saleDetailsDescription: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
+  },
+  saleDetailsPriceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  saleDetailsPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#212121",
+  },
+  saleDetailsOriginalPrice: {
+    fontSize: 14,
+    color: "#666",
+    textDecorationLine: "line-through",
+    marginLeft: 8,
+  },
+  saleDetailsDiscount: {
+    fontSize: 14,
+    color: "#388e3c",
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  saleDetailsFeatures: {
+    marginBottom: 8,
+  },
+  saleDetailsFeature: {
+    fontSize: 12,
+    color: "#666",
   },
 });
 

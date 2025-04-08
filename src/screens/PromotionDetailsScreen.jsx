@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { ChevronLeftIcon, TagIcon, ClockIcon, InformationCircleIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon, TagIcon, ClockIcon, InformationCircleIcon, ShoppingCartIcon } from 'react-native-heroicons/outline';
 
 const PromotionDetailsScreen = ({ route, navigation }) => {
   const { promotion } = route.params;
@@ -47,13 +47,23 @@ const PromotionDetailsScreen = ({ route, navigation }) => {
               <InformationCircleIcon size={20} color="#2874f0" />
               <Text style={styles.termsTitle}>Terms & Conditions</Text>
             </View>
-            <Text style={styles.termsText}>{promotion.terms}</Text>
+            {Array.isArray(promotion.terms) ? (
+              promotion.terms.map((term, index) => (
+                <Text key={index} style={styles.termItem}>• {term}</Text>
+              ))
+            ) : (
+              <Text style={styles.termsText}>{promotion.terms}</Text>
+            )}
           </View>
 
           <TouchableOpacity 
             style={styles.shopNowButton}
-            onPress={() => navigation.navigate('ProductDetails', { product: promotion })}
+            onPress={() => navigation.navigate('CategoryProducts', { 
+              categoryName: promotion.title,
+              promotion: promotion
+            })}
           >
+            <ShoppingCartIcon size={24} color="#fff" />
             <Text style={styles.shopNowText}>Shop Now</Text>
           </TouchableOpacity>
         </View>
@@ -92,6 +102,7 @@ const styles = StyleSheet.create({
   promotionImage: {
     width: '100%',
     height: 250,
+    resizeMode: 'cover',
   },
   promotionInfo: {
     padding: 16,
@@ -177,13 +188,19 @@ const styles = StyleSheet.create({
   termsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   termsTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2874f0',
     marginLeft: 8,
+  },
+  termItem: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 8,
   },
   termsText: {
     fontSize: 14,
@@ -194,7 +211,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#2874f0',
     paddingVertical: 16,
     borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -205,6 +224,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

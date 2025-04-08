@@ -8,7 +8,7 @@ const dummySlides = [
   {
     id: "1",
     imageUrl: "https://img.freepik.com/free-vector/shopping-app-concept-illustration_114360-83.jpg",
-    title: "Welcome to QuickShop",
+    title: "Welcome to Pluscart",
     description: "Your one-stop destination for all your shopping needs",
   },
   {

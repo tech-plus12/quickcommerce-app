@@ -1,102 +1,222 @@
 import React, { useState, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, FlatList, Animated, Alert, Modal, TextInput } from "react-native";
-import { HeartIcon, ShareIcon, ShoppingCartIcon, StarIcon, ChevronLeftIcon, ArrowUpIcon, ArrowDownIcon } from "react-native-heroicons/outline";
-import { HeartIcon as SolidHeartIcon, StarIcon as SolidStarIcon } from "react-native-heroicons/solid";
+import { HeartIcon, ShareIcon, ShoppingCartIcon, StarIcon, ChevronLeftIcon, ArrowUpIcon, ArrowDownIcon, DocumentTextIcon, ClockIcon } from "react-native-heroicons/outline";
+import { HeartIcon as SolidHeartIcon, StarIcon as SolidStarIcon, ClockIcon as SolidClockIcon } from "react-native-heroicons/solid";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../store/cartSlice";
+import { addToWatchLater, removeFromWatchLater } from "../store/watchLaterSlice";
 import Toast from "../components/Toast";
+import { useRoute } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
-const PRODUCT = {
-  id: "1",
-  name: "HealthCare Plus - Vitamin D3 1000 IU",
-  price: "₹299",
-  originalPrice: "₹399",
-  discount: "25% off",
-  rating: 4.3,
-  reviews: [
-    {
-      id: 1,
-      userName: "Rahul Sharma",
-      rating: 5,
-      date: "2024-03-15",
-      comment: "Excellent product! I've been taking it for 3 months and noticed significant improvement in my vitamin D levels.",
-      helpful: 12,
-      verified: true
+// Dummy data for testing prescription UI
+const DUMMY_PRODUCTS = {
+  "1": {
+    id: "1",
+    name: "Amoxicillin 500mg",
+    price: "₹299",
+    originalPrice: "₹399",
+    discount: "25% off",
+    rating: 4.3,
+    reviews: [
+      {
+        id: 1,
+        userName: "Rahul Sharma",
+        rating: 5,
+        date: "2024-03-15",
+        comment: "Effective antibiotic, helped with my infection.",
+        helpful: 12,
+        verified: true
+      },
+      {
+        id: 2,
+        userName: "Priya Patel",
+        rating: 4,
+        date: "2024-03-10",
+        comment: "Good quality medicine, but requires prescription.",
+        helpful: 8,
+        verified: true
+      }
+    ],
+    ratingDistribution: {
+      5: 65,
+      4: 20,
+      3: 10,
+      2: 3,
+      1: 2
     },
-    {
-      id: 2,
-      userName: "Priya Patel",
-      rating: 4,
-      date: "2024-03-10",
-      comment: "Good quality supplement. Easy to swallow and reasonably priced.",
-      helpful: 8,
-      verified: true
+    images: [
+      "https://via.placeholder.com/400",
+      "https://via.placeholder.com/400",
+      "https://via.placeholder.com/400"
+    ],
+    description: "Amoxicillin is a penicillin antibiotic that fights bacteria. It is used to treat many different types of infection caused by bacteria.",
+    highlights: [
+      "500mg per tablet",
+      "Effective against bacterial infections",
+      "Prescription required",
+      "Take as directed by your doctor",
+      "Store in a cool, dry place"
+    ],
+    specifications: {
+      "Active Ingredient": "Amoxicillin",
+      "Strength": "500mg",
+      "Pack Size": "10 tablets",
+      "Shelf Life": "24 months",
+      "Manufacturer": "HealthCare Pharmaceuticals",
+      "Prescription Required": "Yes"
     },
-    {
-      id: 3,
-      userName: "Amit Kumar",
-      rating: 5,
-      date: "2024-03-05",
-      comment: "Best vitamin D supplement I've used. The tablets are small and easy to take.",
-      helpful: 15,
-      verified: true
-    },
-    {
-      id: 4,
-      userName: "Neha Gupta",
-      rating: 3,
-      date: "2024-02-28",
-      comment: "Product is okay, but the packaging could be better.",
-      helpful: 5,
-      verified: true
-    }
-  ],
-  ratingDistribution: {
-    5: 65,
-    4: 20,
-    3: 10,
-    2: 3,
-    1: 2
+    usage: "Take one tablet every 8 hours or as directed by your doctor.",
+    warnings: "Do not take if allergic to penicillin. Keep out of reach of children. Store in a cool, dry place.",
+    prescription: true,
   },
-  images: [
-    "https://via.placeholder.com/400",
-    "https://via.placeholder.com/400",
-    "https://via.placeholder.com/400",
-    "https://via.placeholder.com/400"
-  ],
-  description: "High-quality Vitamin D3 supplement for bone health and immune system support. Each tablet contains 1000 IU of Vitamin D3.",
-  highlights: [
-    "1000 IU Vitamin D3 per tablet",
-    "Easy to swallow",
-    "Suitable for daily use",
-    "Strengthens bones and teeth",
-    "Supports immune system"
-  ],
-  specifications: {
-    "Active Ingredient": "Vitamin D3 (Cholecalciferol)",
-    "Strength": "1000 IU",
-    "Pack Size": "60 tablets",
-    "Shelf Life": "24 months",
-    "Manufacturer": "HealthCare Pharmaceuticals",
-    "Prescription Required": "No"
+  "2": {
+    id: "2",
+    name: "Vitamin C 1000mg",
+    price: "₹199",
+    originalPrice: "₹299",
+    discount: "33% off",
+    rating: 4.5,
+    reviews: [
+      {
+        id: 1,
+        userName: "Amit Kumar",
+        rating: 5,
+        date: "2024-03-12",
+        comment: "Great for immunity boost!",
+        helpful: 15,
+        verified: true
+      },
+      {
+        id: 2,
+        userName: "Neha Gupta",
+        rating: 4,
+        date: "2024-03-08",
+        comment: "Good quality vitamin supplement.",
+        helpful: 10,
+        verified: true
+      }
+    ],
+    ratingDistribution: {
+      5: 70,
+      4: 25,
+      3: 3,
+      2: 1,
+      1: 1
+    },
+    images: [
+      "https://via.placeholder.com/400",
+      "https://via.placeholder.com/400"
+    ],
+    description: "High-quality Vitamin C supplement for immune system support. Each tablet contains 1000mg of Vitamin C.",
+    highlights: [
+      "1000mg Vitamin C per tablet",
+      "No prescription required",
+      "Supports immune system",
+      "Antioxidant properties",
+      "Easy to swallow"
+    ],
+    specifications: {
+      "Active Ingredient": "Vitamin C (Ascorbic Acid)",
+      "Strength": "1000mg",
+      "Pack Size": "60 tablets",
+      "Shelf Life": "24 months",
+      "Manufacturer": "HealthCare Pharmaceuticals",
+      "Prescription Required": "No"
+    },
+    usage: "Take one tablet daily with meals or as directed by your healthcare provider.",
+    warnings: "Keep out of reach of children. Store in a cool, dry place.",
+    prescription: false,
   },
-  usage: "Take one tablet daily with meals or as directed by your healthcare provider.",
-  warnings: "Keep out of reach of children. Store in a cool, dry place. Do not exceed the recommended dose.",
+  "3": {
+    id: "3",
+    name: "Azithromycin 250mg",
+    price: "₹349",
+    originalPrice: "₹449",
+    discount: "22% off",
+    rating: 4.2,
+    reviews: [
+      {
+        id: 1,
+        userName: "Suresh Kumar",
+        rating: 5,
+        date: "2024-03-14",
+        comment: "Effective for respiratory infections.",
+        helpful: 18,
+        verified: true
+      },
+      {
+        id: 2,
+        userName: "Meena Patel",
+        rating: 4,
+        date: "2024-03-09",
+        comment: "Works well, but requires prescription.",
+        helpful: 9,
+        verified: true
+      }
+    ],
+    ratingDistribution: {
+      5: 60,
+      4: 25,
+      3: 10,
+      2: 3,
+      1: 2
+    },
+    images: [
+      "https://via.placeholder.com/400",
+      "https://via.placeholder.com/400"
+    ],
+    description: "Azithromycin is a macrolide antibiotic used to treat various bacterial infections.",
+    highlights: [
+      "250mg per tablet",
+      "Effective against bacterial infections",
+      "Prescription required",
+      "Take as directed by your doctor",
+      "Store in a cool, dry place"
+    ],
+    specifications: {
+      "Active Ingredient": "Azithromycin",
+      "Strength": "250mg",
+      "Pack Size": "6 tablets",
+      "Shelf Life": "24 months",
+      "Manufacturer": "HealthCare Pharmaceuticals",
+      "Prescription Required": "Yes"
+    },
+    usage: "Take one tablet daily or as directed by your doctor.",
+    warnings: "Do not take if allergic to macrolide antibiotics. Keep out of reach of children. Store in a cool, dry place.",
+    prescription: true,
+  }
 };
 
 const ProductDetailsScreen = ({ navigation }) => {
+  const route = useRoute();
+  const { productId } = route.params;
+  
+  // Get the product from DUMMY_PRODUCTS based on the productId
+  const product = DUMMY_PRODUCTS[productId];
+  
+  if (!product) {
+    return (
+      <View style={styles.container}>
+        <Text>Product not found</Text>
+      </View>
+    );
+  }
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
+  const watchLaterItems = useSelector((state) => state.watchLater.items);
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const [showToast, setShowToast] = useState(false);
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'highest', 'lowest'
+  const [toastMessage, setToastMessage] = useState("");
+  const [sortBy, setSortBy] = useState('newest');
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewForm, setReviewForm] = useState({
@@ -105,12 +225,26 @@ const ProductDetailsScreen = ({ navigation }) => {
     userName: 'Anonymous User'
   });
 
+  const isInWatchLater = watchLaterItems.some(item => item.id === product.id);
+
+  const handleWatchLater = () => {
+    if (isInWatchLater) {
+      dispatch(removeFromWatchLater({ productId: product.id }));
+      setToastMessage("Removed from Watch Later");
+    } else {
+      dispatch(addToWatchLater({ product }));
+      setToastMessage("Added to Watch Later");
+    }
+    setShowToast(true);
+  };
+
   const handleQuantityChange = (increment) => {
     setQuantity((prev) => Math.max(1, prev + increment));
   };
 
   const handleAddToCart = () => {
-    dispatch(addToCart({ product: PRODUCT, quantity }));
+    dispatch(addToCart({ product, quantity }));
+    setToastMessage(`${quantity} item${quantity > 1 ? "s" : ""} added to cart`);
     setShowToast(true);
   };
 
@@ -134,7 +268,7 @@ const ProductDetailsScreen = ({ navigation }) => {
     }
 
     const newReview = {
-      id: PRODUCT.reviews.length + 1,
+      id: product.reviews.length + 1,
       userName: reviewForm.userName,
       rating: reviewForm.rating,
       date: new Date().toISOString().split('T')[0],
@@ -144,7 +278,6 @@ const ProductDetailsScreen = ({ navigation }) => {
     };
 
     // In a real app, you would make an API call here to save the review
-    // For now, we'll just show a success message
     Alert.alert(
       'Success',
       'Thank you for your review!',
@@ -202,7 +335,7 @@ const ProductDetailsScreen = ({ navigation }) => {
   );
 
   const renderReviewsSection = () => {
-    const sortedReviews = sortReviews(PRODUCT.reviews);
+    const sortedReviews = sortReviews(product.reviews);
     const displayReviews = showAllReviews ? sortedReviews : sortedReviews.slice(0, 2);
 
     return (
@@ -249,7 +382,7 @@ const ProductDetailsScreen = ({ navigation }) => {
           }
         />
 
-        {!showAllReviews && PRODUCT.reviews.length > 2 && (
+        {!showAllReviews && product.reviews.length > 2 && (
           <TouchableOpacity 
             style={styles.showMoreButton}
             onPress={() => setShowAllReviews(true)}
@@ -265,7 +398,7 @@ const ProductDetailsScreen = ({ navigation }) => {
     <View style={styles.carouselContainer}>
       <Animated.FlatList
         ref={flatListRef}
-        data={PRODUCT.images}
+        data={product.images}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -280,7 +413,7 @@ const ProductDetailsScreen = ({ navigation }) => {
 
       {/* Pagination Dots */}
       <View style={styles.pagination}>
-        {PRODUCT.images.map((_, index) => (
+        {product.images.map((_, index) => (
           <View key={index} style={[styles.paginationDot, index === activeImageIndex && styles.paginationDotActive]} />
         ))}
       </View>
@@ -288,7 +421,7 @@ const ProductDetailsScreen = ({ navigation }) => {
       {/* Thumbnail Preview */}
       <View style={styles.thumbnailContainer}>
         <FlatList
-          data={PRODUCT.images}
+          data={product.images}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.thumbnailList}
@@ -312,20 +445,20 @@ const ProductDetailsScreen = ({ navigation }) => {
   );
 
   const renderRatingChart = () => {
-    const totalReviews = Object.values(PRODUCT.ratingDistribution).reduce((a, b) => a + b, 0);
+    const totalReviews = Object.values(product.ratingDistribution).reduce((a, b) => a + b, 0);
     
     return (
       <View style={styles.ratingChartContainer}>
         <Text style={styles.sectionTitle}>Customer Reviews</Text>
         <View style={styles.ratingSummary}>
           <View style={styles.overallRating}>
-            <Text style={styles.overallRatingNumber}>{PRODUCT.rating}</Text>
+            <Text style={styles.overallRatingNumber}>{product.rating}</Text>
             <View style={styles.starsContainer}>
               {[1, 2, 3, 4, 5].map((star) => (
                 <StarIcon
                   key={star}
                   size={16}
-                  color={star <= Math.floor(PRODUCT.rating) ? "#ffd700" : "#ddd"}
+                  color={star <= Math.floor(product.rating) ? "#ffd700" : "#ddd"}
                 />
               ))}
             </View>
@@ -333,14 +466,14 @@ const ProductDetailsScreen = ({ navigation }) => {
           </View>
           <View style={styles.ratingBars}>
             {[5, 4, 3, 2, 1].map((rating) => {
-              const percentage = (PRODUCT.ratingDistribution[rating] / totalReviews) * 100;
+              const percentage = (product.ratingDistribution[rating] / totalReviews) * 100;
               return (
                 <View key={rating} style={styles.ratingBarRow}>
                   <Text style={styles.ratingLabel}>{rating} ★</Text>
                   <View style={styles.ratingBarContainer}>
                     <View style={[styles.ratingBar, { width: `${percentage}%` }]} />
                   </View>
-                  <Text style={styles.ratingCount}>{PRODUCT.ratingDistribution[rating]}</Text>
+                  <Text style={styles.ratingCount}>{product.ratingDistribution[rating]}</Text>
                 </View>
               );
             })}
@@ -404,9 +537,21 @@ const ProductDetailsScreen = ({ navigation }) => {
     </Modal>
   );
 
+  const renderPrescriptionInfo = () => {
+    if (product.prescription) {
+      return (
+        <View style={styles.prescriptionInfo}>
+          <DocumentTextIcon size={20} color="#ff4444" />
+          <Text style={styles.prescriptionText}>Prescription Required</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
   return (
     <View style={styles.container}>
-      <Toast message={`${quantity} item${quantity > 1 ? "s" : ""} added to cart`} isVisible={showToast} onHide={() => setShowToast(false)} />
+      <Toast message={toastMessage} isVisible={showToast} onHide={() => setShowToast(false)} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -414,6 +559,13 @@ const ProductDetailsScreen = ({ navigation }) => {
           <ChevronLeftIcon size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerRight}>
+          <TouchableOpacity onPress={handleWatchLater} style={styles.headerButton}>
+            {isInWatchLater ? (
+              <SolidClockIcon size={24} color="#2874f0" />
+            ) : (
+              <ClockIcon size={24} color="#fff" />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setIsFavorite(!isFavorite)} style={styles.headerButton}>
             {isFavorite ? <SolidHeartIcon size={24} color="#ff4444" /> : <HeartIcon size={24} color="#fff" />}
           </TouchableOpacity>
@@ -440,12 +592,13 @@ const ProductDetailsScreen = ({ navigation }) => {
         {renderImageCarousel()}
 
         <View style={styles.detailsContainer}>
-          <Text style={styles.productName}>{PRODUCT.name}</Text>
+          <Text style={styles.productName}>{product.name}</Text>
+          {renderPrescriptionInfo()}
 
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>{PRODUCT.price}</Text>
-            <Text style={styles.originalPrice}>{PRODUCT.originalPrice}</Text>
-            <Text style={styles.discount}>{PRODUCT.discount}</Text>
+            <Text style={styles.price}>{product.price}</Text>
+            {product.originalPrice && <Text style={styles.originalPrice}>{product.originalPrice}</Text>}
+            {product.discount && <Text style={styles.discount}>{product.discount}</Text>}
           </View>
 
           {/* Quantity Selector */}
@@ -464,22 +617,22 @@ const ProductDetailsScreen = ({ navigation }) => {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{PRODUCT.description}</Text>
+            <Text style={styles.description}>{product.description}</Text>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Usage Instructions</Text>
-            <Text style={styles.usageText}>{PRODUCT.usage}</Text>
+            <Text style={styles.usageText}>{product.usage}</Text>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Warnings</Text>
-            <Text style={styles.warningText}>{PRODUCT.warnings}</Text>
+            <Text style={styles.warningText}>{product.warnings}</Text>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Highlights</Text>
-            {PRODUCT.highlights.map((highlight, index) => (
+            {product.highlights.map((highlight, index) => (
               <Text key={index} style={styles.highlightItem}>
                 • {highlight}
               </Text>
@@ -488,7 +641,7 @@ const ProductDetailsScreen = ({ navigation }) => {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Specifications</Text>
-            {Object.entries(PRODUCT.specifications).map(([key, value]) => (
+            {Object.entries(product.specifications).map(([key, value]) => (
               <View key={key} style={styles.specificationRow}>
                 <Text style={styles.specificationKey}>{key}</Text>
                 <Text style={styles.specificationValue}>{value}</Text>
@@ -511,7 +664,7 @@ const ProductDetailsScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.bottomButton, styles.buyNowButton]}
           onPress={() => {
-            dispatch(addToCart({ product: PRODUCT, quantity }));
+            dispatch(addToCart({ product, quantity }));
             navigation.navigate('Cart');
           }}
         >
@@ -1033,6 +1186,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  prescriptionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3f3',
+    padding: 8,
+    borderRadius: 4,
+    marginTop: 8,
+  },
+  prescriptionText: {
+    color: '#ff4444',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
   },
 });
 

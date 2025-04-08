@@ -1,5 +1,5 @@
 {
-  "name": "AwesomeProject",
+  "name": "Pluscart",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -11,7 +11,7 @@
     "log": "npx react-native log-android",
     "build-android": "cd android && gradlew.bat assembleRelease",
     "clean": "cd android && gradlew.bat clean && cd ..",
-    "build-ios": "cd ios && xcodebuild -workspace AwesomeProject.xcworkspace -scheme AwesomeProject -configuration Release -sdk iphoneos -derivedDataPath build"
+    "build-ios": "cd ios && xcodebuild -workspace Pluscart.xcworkspace -scheme Pluscart -configuration Release -sdk iphoneos -derivedDataPath build"
   },
   "dependencies": {
     "@pushpendersingh/react-native-scanner": "^1.5.0",
@@ -33,6 +33,7 @@
     "react-native-gesture-handler": "^2.24.0",
     "react-native-get-random-values": "^1.11.0",
     "react-native-heroicons": "^4.0.0",
+    "react-native-image-picker": "^8.2.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-permissions": "^5.2.6",
     "react-native-reanimated": "^3.17.1",

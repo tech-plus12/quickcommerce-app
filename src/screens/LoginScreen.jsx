@@ -18,22 +18,12 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { Formik } from "formik";
 import * as Yup from "yup";
-import {
-  login,
-  signup,
-  verifyOTP,
-  resetPassword,
-  addResetInfo,
-  updatePassword,
-  initiateSignup,
-  completeSignup,
-  clearError,
-  clearSuccess,
-  forgotPassword,
-} from "../store/authSlice";
+import { login, signup, verifyOTP, resetPassword, addResetInfo, completeSignup, clearError, clearSuccess, forgotPassword } from "../store/authSlice";
 import Icon from "react-native-vector-icons/Feather";
 import LinearGradient from "react-native-linear-gradient";
 import Toast from "react-native-toast-message";
+
+import secret from "../constatnts/secret";
 
 const { width, height } = Dimensions.get("window");
 
@@ -165,7 +155,7 @@ const AuthScreen = ({ navigation }) => {
         login({
           phone: values.phoneNumber,
           password: values.password,
-          company_id: "67e920003c16eb613ed5e8a9",
+          company_id: secret.company_id,
         })
       ).unwrap();
 
@@ -217,7 +207,7 @@ const AuthScreen = ({ navigation }) => {
         email: values.email,
         phone: values.phoneNumber,
         password: values.password,
-        company_id: "67e920003c16eb613ed5e8a9", // Hardcoded company ID
+        company_id: secret.company_id,
       };
 
       const response = await dispatch(signup(signupData)).unwrap();
@@ -279,7 +269,7 @@ const AuthScreen = ({ navigation }) => {
         forgotPassword({
           contactType: values.contactType,
           contact: values.contact,
-          company_id: "67e920003c16eb613ed5e8a9",
+          company_id: secret.company_id,
         })
       ).unwrap();
 
@@ -303,34 +293,34 @@ const AuthScreen = ({ navigation }) => {
     }
   };
 
-  const handleResetPassword = async (values, { setSubmitting }) => {
-    try {
-      const response = await dispatch(
-        resetPassword({
-          user_id: "67e920003c16eb613ed5e8a9",
-          otp: values.otp,
-          new_password: values.newPassword,
-        })
-      ).unwrap();
+  // const handleResetPassword = async (values, { setSubmitting }) => {
+  //   try {
+  //     const response = await dispatch(
+  //       resetPassword({
+  //         user_id: "67e920003c16eb613ed5e8a9",
+  //         otp: values.otp,
+  //         new_password: values.newPassword,
+  //       })
+  //     ).unwrap();
 
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: "Password reset successfully!",
-        position: "bottom",
-      });
-      setResetStep(0);
-    } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: error.message || "Failed to reset password. Please try again.",
-        position: "bottom",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  //     Toast.show({
+  //       type: "success",
+  //       text1: "Success",
+  //       text2: "Password reset successfully!",
+  //       position: "bottom",
+  //     });
+  //     setResetStep(0);
+  //   } catch (error) {
+  //     Toast.show({
+  //       type: "error",
+  //       text1: "Error",
+  //       text2: error.message || "Failed to reset password. Please try again.",
+  //       position: "bottom",
+  //     });
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
 
   // Animation interpolation
   const slideAnim = animation.interpolate({
@@ -822,9 +812,9 @@ const AuthScreen = ({ navigation }) => {
         {/* App Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoText}>Q</Text>
+            <Text style={styles.logoText}>P</Text>
           </View>
-          <Text style={styles.appName}>QuickShop</Text>
+          <Text style={styles.appName}>Pluscart</Text>
         </View>
 
         {/* Auth Card */}

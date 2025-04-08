@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createSelector } from "@reduxjs/toolkit";
 
 const cartSlice = createSlice({
   name: "cart",
@@ -7,37 +7,28 @@ const cartSlice = createSlice({
   },
   reducers: {
     addToCart: (state, action) => {
-      const { product, quantity = 1 } = action.payload;
-      const existingItem = state.items.find((item) => item.id === product.id);
-
-      // Convert price string to number
-      const numericPrice = Number(product.price.replace('₹', '').replace(/,/g, ''));
-
+      const { product, quantity } = action.payload;
+      const existingItem = state.items.find(item => item.product.id === product.id);
+      
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
-        state.items.push({ 
-          ...product, 
+        state.items.push({
+          product,
           quantity,
-          numericPrice // Store the numeric price
+          prescriptionStatus: product.prescription ? 'pending' : 'not_required'
         });
       }
     },
 
     removeFromCart: (state, action) => {
       const productId = action.payload;
-      state.items = state.items.filter((item) => item.id !== productId);
+      state.items = state.items.filter(item => item.product.id !== productId);
     },
 
     updateQuantity: (state, action) => {
       const { productId, quantity } = action.payload;
-
-      if (quantity < 1) {
-        state.items = state.items.filter((item) => item.id !== productId);
-        return;
-      }
-
-      const item = state.items.find(item => item.id === productId);
+      const item = state.items.find(item => item.product.id === productId);
       if (item) {
         item.quantity = quantity;
       }
@@ -46,16 +37,51 @@ const cartSlice = createSlice({
     clearCart: (state) => {
       state.items = [];
     },
+
+    updatePrescriptionStatus: (state, action) => {
+      const { productId, status, prescriptionImage } = action.payload;
+      const item = state.items.find(item => item.product.id === productId);
+      if (item) {
+        item.prescriptionStatus = status;
+        item.prescriptionImage = prescriptionImage;
+      }
+    },
+
+    approvePrescription: (state, action) => {
+      const { productId } = action.payload;
+      const item = state.items.find(item => item.product.id === productId);
+      if (item) {
+        item.prescriptionStatus = 'approved';
+      }
+    },
   },
 });
 
-export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions;
+export const { 
+  addToCart, 
+  removeFromCart, 
+  updateQuantity, 
+  clearCart,
+  updatePrescriptionStatus,
+  approvePrescription
+} = cartSlice.actions;
 
-// Updated getCartTotal selector
-export const getCartTotal = (state) => {
-  return state.cart.items.reduce((total, item) => {
-    return total + (item.numericPrice * item.quantity);
-  }, 0);
-};
+// Memoized selectors
+const selectCartItems = state => state.cart.items;
+
+export const getCartTotal = createSelector(
+  [selectCartItems],
+  (items) => {
+    return items.reduce((total, item) => {
+      const price = parseFloat(item.product.price.replace('₹', ''));
+      return total + (price * item.quantity);
+    }, 0);
+  }
+);
+
+export const getPrescriptionItems = createSelector(
+  [selectCartItems],
+  (items) => items.filter(item => item.product.prescription)
+);
 
 export default cartSlice.reducer;

@@ -16,6 +16,7 @@ import {
   TruckIcon,
   HomeIcon,
   XCircleIcon,
+  DocumentTextIcon,
 } from 'react-native-heroicons/outline';
 
 const OrderDetailsScreen = ({ route, navigation }) => {
@@ -61,21 +62,53 @@ const OrderDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  const getOrderSteps = () => {
+    const baseSteps = [
+      { title: 'Order Placed', completed: true },
+      { title: 'Processing', completed: order.status !== 'pending' },
+      { title: 'Shipped', completed: order.status === 'shipped' || order.status === 'delivered' },
+      { title: 'Delivered', completed: order.status === 'delivered' }
+    ];
+
+    // Insert prescription validation step after order placed for orders with prescription items
+    if (order.items?.some(item => item.prescription)) {
+      return [
+        baseSteps[0],
+        { 
+          title: 'Prescription', 
+          completed: order.prescriptionStatus === 'validated' || order.status !== 'pending'
+        },
+        ...baseSteps.slice(1)
+      ];
+    }
+
+    return baseSteps;
+  };
+
+  const getStepIcon = (step) => {
+    if (step.completed) {
+      return <CheckCircleIcon size={24} color="#4CAF50" />;
+    }
+    
+    switch (step.title) {
+      case 'Prescription':
+        return <DocumentTextIcon size={24} color="#BDBDBD" />;
+      default:
+        return <ClockIcon size={24} color="#BDBDBD" />;
+    }
+  };
+
   const renderTrackingSteps = () => (
     <View style={styles.trackingContainer}>
       <Text style={styles.sectionTitle}>Order Tracking</Text>
       <View style={styles.trackingSteps}>
-        {order.tracking?.steps.map((step, index) => (
+        {getOrderSteps().map((step, index) => (
           <View key={step.title} style={styles.stepContainer}>
             <View style={[
               styles.stepIconContainer,
               step.completed && { borderColor: '#4CAF50' }
             ]}>
-              {step.completed ? (
-                <CheckCircleIcon size={24} color="#4CAF50" />
-              ) : (
-                <ClockIcon size={24} color="#BDBDBD" />
-              )}
+              {getStepIcon(step)}
             </View>
             <Text style={[
               styles.stepTitle,
@@ -83,7 +116,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
             ]}>
               {step.title}
             </Text>
-            {index < order.tracking.steps.length - 1 && (
+            {index < getOrderSteps().length - 1 && (
               <View style={[
                 styles.stepLine,
                 step.completed && styles.stepLineCompleted
@@ -104,6 +137,14 @@ const OrderDetailsScreen = ({ route, navigation }) => {
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+            {item.prescription && (
+              <View style={styles.prescriptionBadge}>
+                <DocumentTextIcon size={16} color="#ff4444" />
+                <Text style={styles.prescriptionText}>
+                  {order.prescriptionStatus === 'validated' ? 'Prescription Validated' : 'Awaiting Validation'}
+                </Text>
+              </View>
+            )}
           </View>
           <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
         </View>
@@ -319,6 +360,21 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     marginRight: 12,
+  },
+  prescriptionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3f3',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  prescriptionText: {
+    color: '#ff4444',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
 });
 
